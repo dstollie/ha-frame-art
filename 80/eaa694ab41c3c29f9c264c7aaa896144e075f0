@@ -1,0 +1,23 @@
+frame_art/packages/web/e2e/app.spec.ts
+  s_e57963d2c3d792::t_ef29605c819ac0 284-315
+frame_art/packages/web/src/lib/i18n.ts
+  s_e57963d2c3d792::t_cab5b9aa698af4 123-125,282-284
+frame_art/packages/web/src/pages/settings.tsx
+  s_e57963d2c3d792::t_a4d00e8451353b 295-302,342-353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80eaa694ab41c3c29f9c264c7aaa896144e075f0",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
