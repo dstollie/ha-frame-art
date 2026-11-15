@@ -1,0 +1,33 @@
+README.md
+  s_e57963d2c3d792::t_96ea3e850f625d 18-19,97-102,129
+custom_components/frame_art/manifest.json
+  s_e57963d2c3d792::t_b5825c158da126 12
+frame_art/CHANGELOG.md
+  s_e57963d2c3d792::t_30cca2dfd82c96 3-9
+frame_art/DOCS.md
+  s_e57963d2c3d792::t_4ee3f933da27a2 12,25-32,40-43
+frame_art/config.yaml
+  s_e57963d2c3d792::t_79b7813aaebd60 2
+knowledge/codebase/03-processes.md
+  s_e57963d2c3d792::t_08fc4a425a2196 78-81
+knowledge/codebase/04-data-models.md
+  s_e57963d2c3d792::t_9d55e7efce02a2 30-43,66,73-74
+specs/completed/2026-11-15-series.md
+  s_e57963d2c3d792::t_9c222ea47203c4 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a7562e2ab35b10a56c7df348dcced68d82dee4db",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
