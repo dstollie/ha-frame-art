@@ -1,7 +1,7 @@
 name: Frame Art
-version: "0.1.2"
+version: "0.2.0"
 slug: frame_art
-description: Open-access museumschilderijen op je Samsung The Frame, met één tik.
+description: Open-access museum art and your own photos on a Samsung The Frame, with a native panel and MCP.
 url: https://github.com/dstollie/ha-frame-art
 arch:
   - aarch64
@@ -15,6 +15,9 @@ ingress_stream: false
 panel_icon: mdi:image-frame
 panel_title: Frame Art
 homeassistant_api: true
+hassio_api: true
+discovery:
+  - frame_art
 services:
   - mqtt:want
 watchdog: http://[HOST]:[PORT:8099]/api/config
