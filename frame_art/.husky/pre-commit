@@ -1,0 +1,1 @@
+cd frame_art && pnpm exec nano-staged

@@ -1,0 +1,17 @@
+{
+  "semi": false,
+  "printWidth": 120,
+  "sortPackageJson": {},
+  "sortImports": {},
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "coverage/",
+    "test-results/",
+    "playwright-report/",
+    "scratch/",
+    "pnpm-lock.yaml",
+    "*.tsbuildinfo",
+    "packages/server/test/fixtures/"
+  ]
+}

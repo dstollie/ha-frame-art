@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.next/
+out/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.data/
+scratch/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.pem
+*.key
+*.token
+
+# Local research and notes (RPI); specs/ stays in version control
+thoughts/

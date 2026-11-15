@@ -1,0 +1,36 @@
+{
+  "name": "frame-art",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "cd .. && husky frame_art/.husky",
+    "build": "pnpm --filter @frame-art/frame-tv build && pnpm --filter @frame-art/server build && pnpm --filter web build",
+    "typecheck": "pnpm --filter @frame-art/frame-tv build && pnpm -r run typecheck",
+    "lint": "oxlint --deny-warnings --report-unused-disable-directives",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "test": "pnpm --filter @frame-art/frame-tv build && pnpm --filter @frame-art/frame-tv test && pnpm --filter @frame-art/server test",
+    "test:e2e": "pnpm --filter web build && pnpm --filter web e2e",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:e2e",
+    "dev:stack": "pnpm --filter web build && pnpm --filter @frame-art/server exec tsx scripts/dev-stack.ts --seed live --port 8123",
+    "docker:build": "DOCKER_BUILDKIT=0 docker build --platform linux/arm64 -t local/frame_art ."
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "nano-staged": "^1.0.2",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0"
+  },
+  "nano-staged": {
+    "*": [
+      "oxlint --fix --no-error-on-unmatched-pattern",
+      "oxfmt --no-error-on-unmatched-pattern"
+    ]
+  },
+  "engines": {
+    "node": ">=22.21.0"
+  },
+  "packageManager": "pnpm@10.20.0"
+}
