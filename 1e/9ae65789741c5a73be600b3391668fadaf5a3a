@@ -1,0 +1,53 @@
+.gitignore
+  s_35b33d2053e250::t_c18cb8d6297b91 20-26
+custom_components/frame_art/__init__.py
+  s_e57963d2c3d792::t_f9023ed39cbe80 1-48
+custom_components/frame_art/config_flow.py
+  s_e57963d2c3d792::t_966d4d5c83c041 1-75
+custom_components/frame_art/const.py
+  s_e57963d2c3d792::t_8b288904fc2746 1-13
+custom_components/frame_art/manifest.json
+  s_e57963d2c3d792::t_78498dab8e7161 1-13
+custom_components/frame_art/proxy.py
+  s_e57963d2c3d792::t_45d56c75a833f7 1-135
+custom_components/frame_art/strings.json
+  s_e57963d2c3d792::t_6ecb30caf58273 1-17
+custom_components/frame_art/translations/en.json
+  s_e57963d2c3d792::t_3fd13efe6aea53 1-17
+custom_components/frame_art/translations/nl.json
+  s_e57963d2c3d792::t_2f130df97bbc84 1-17
+hacs.json
+  s_e57963d2c3d792::t_560b1ae158a27e 1-5
+pyproject.toml
+  s_e57963d2c3d792::t_7cd93e6884098f 1-25
+tests/conftest.py
+  s_e57963d2c3d792::t_674f1ec1c97354 1-7
+tests/test_integration.py
+  s_e57963d2c3d792::t_3b161bef498cb3 1-128
+uv.lock
+  s_e57963d2c3d792::t_8381349ec0cdbc 1-3385
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e9ae65789741c5a73be600b3391668fadaf5a3a",
+  "prompts": {},
+  "sessions": {
+    "s_35b33d2053e250": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "506a1efe-c71b-46d2-9d51-9112d86d6e2d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    },
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
