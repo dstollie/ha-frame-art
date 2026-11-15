@@ -12,6 +12,22 @@ import { FrameArtClient, FrameError, deviceInfo } from "@frame-art/frame-tv"
 
 import type { TVConfig } from "./config.js"
 
+/** Broadcasts a Frame sends on its own (or for other clients); seen on every upload, not worth a log line. */
+const ROUTINE_EVENTS = new Set([
+  "send_image",
+  "image_added",
+  "select_image",
+  "image_selected",
+  "recently_set_updated",
+  "art_mode_changed",
+  "artmode_status",
+  "set_artmode_status",
+  "go_to_standby",
+  "wakeup",
+])
+
+export const isRoutineEvent = (p: Record<string, unknown>) => typeof p.event === "string" && ROUTINE_EVENTS.has(p.event)
+
 export interface TV {
   readonly id: string
   readonly paired: boolean
@@ -74,7 +90,10 @@ export class FrameTV implements TV {
       timeoutMs: 20_000,
       pairTimeoutMs: 60_000,
       ...(this.cfg.ackTimeoutMs ? { ackTimeoutMs: this.cfg.ackTimeoutMs } : {}),
-      onUnmatched: (p) => console.log(`art ${this.id}: unanswered event ${JSON.stringify(p).slice(0, 300)}`),
+      onUnmatched: (p) => {
+        if (isRoutineEvent(p) && !process.env.FRAME_ART_DEBUG) return
+        console.log(`art ${this.id}: unanswered event ${JSON.stringify(p).slice(0, 300)}`)
+      },
     })
     try {
       return await fn(client)
