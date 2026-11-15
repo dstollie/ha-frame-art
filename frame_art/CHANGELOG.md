@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Fix: Settings → AI assistants (MCP) showed only `/api/frame_art/mcp`. The endpoint is now an absolute URL, with a choice between Remote (Nabu Casa or your external URL) and Local, taken from Home Assistant's own URL settings. The copy command includes the real token once you reveal it.
+- The add-on options are described in English.
+
 ## 0.2.0
 
 - **Native Home Assistant panel.** New companion integration (HACS) puts Frame Art in the sidebar as a native panel: HA's own components, theme (light and dark) and language (English, Dutch). The add-on announces itself through Supervisor discovery, so setting it up is one click. The ingress page shows the same UI.
