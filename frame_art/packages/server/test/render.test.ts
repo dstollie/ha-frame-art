@@ -190,19 +190,19 @@ describe("render", () => {
 
 describe("colour", () => {
   it.each([
-    [[200, 30, 30], "rood"],
-    [[30, 140, 60], "groen"],
-    [[40, 70, 170], "blauw"],
-    [[220, 180, 60], "goud"],
-    [[100, 65, 30], "bruin"],
-    [[15, 15, 15], "donker"],
-    [[240, 238, 230], "licht"],
+    [[200, 30, 30], "red"],
+    [[30, 140, 60], "green"],
+    [[40, 70, 170], "blue"],
+    [[220, 180, 60], "gold"],
+    [[100, 65, 30], "brown"],
+    [[15, 15, 15], "dark"],
+    [[240, 238, 230], "light"],
   ] as [[number, number, number], string][])("%j is %s", (rgb, fam) => {
     expect(colorFamily(rgb)).toBe(fam)
   })
   it("finds the main colour and the aspect", async () => {
     const c = await dominantColor(await jpeg(300, 200, [30, 60, 160]))
-    expect(c.family).toBe("blauw")
+    expect(c.family).toBe("blue")
     expect(c.aspect).toBe(1.5)
   })
 })

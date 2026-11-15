@@ -5,7 +5,10 @@
  */
 import sharp, { type OverlayOptions, type Sharp } from "sharp"
 
+import { colorFamily, rgbToHsl } from "./color.js"
 import type { Mode } from "./models.js"
+
+export { COLOR_FAMILIES, colorFamily } from "./color.js"
 
 sharp.cache(false)
 sharp.concurrency(2)
@@ -191,35 +194,6 @@ export async function thumbnailJpeg(jpeg: Buffer, width = 640, height = 360): Pr
 }
 
 // ---------------------------------------------------------------- colour
-
-export const COLOR_FAMILIES = ["rood", "goud", "bruin", "groen", "blauw", "donker", "licht"] as const
-
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  r /= 255
-  g /= 255
-  b /= 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  if (max === min) return [0, 0, l]
-  const d = max - min
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-  let h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4
-  h *= 60
-  return [h, s, l]
-}
-
-export function colorFamily(rgb: [number, number, number]): string {
-  const [deg, s, l] = rgbToHsl(...rgb)
-  if (l < 0.16) return "donker"
-  if (l > 0.78 && s < 0.35) return "licht"
-  if (s < 0.12) return l < 0.45 ? "donker" : "licht"
-  if (deg < 18 || deg >= 330) return "rood"
-  if (deg < 65) return l < 0.42 ? "bruin" : "goud"
-  if (deg < 170) return "groen"
-  if (deg < 270) return "blauw"
-  return "rood"
-}
 
 /** The most characteristic colour: a 4-bit-per-channel histogram, weighted toward saturated mid-tones. */
 export async function dominantColor(data: Buffer): Promise<{ hex: string; family: string; aspect: number | null }> {

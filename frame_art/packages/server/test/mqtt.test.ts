@@ -20,7 +20,7 @@ describe("MQTT discovery", () => {
     })
     expect(
       (msgs["homeassistant/select/frame_art_woonkamer/category/config"] as { options: string[] }).options,
-    ).toContain("Gouden Eeuw")
+    ).toContain("Old masters")
     const ids = Object.values(msgs).map((m) => JSON.stringify((m as { device: unknown }).device))
     expect(new Set(ids).size).toBe(1)
   })

@@ -1,18 +1,43 @@
-/** Rule-based categories. None of the museum APIs has a usable style field, so we derive our own. */
+/**
+ * Rule-based categories. No museum API has a usable style field across sources, so we derive
+ * our own from artist, year, culture, medium, tags and title words. Ids are English and stable;
+ * labels come in every UI language. Keywords cover the languages our providers write titles in.
+ */
 import type { Artwork } from "./models.js"
 
 export const CATEGORIES = [
-  ["impressionisme", "Impressionisme"],
-  ["gouden-eeuw", "Gouden Eeuw"],
-  ["landschap", "Landschap"],
-  ["zee", "Zee & water"],
-  ["stilleven", "Stilleven"],
-  ["bloemen", "Bloemen"],
-  ["portret", "Portret"],
-  ["japans", "Japanse prenten"],
-  ["modern", "Modern"],
+  { id: "impressionism", en: "Impressionism", nl: "Impressionisme" },
+  { id: "old-masters", en: "Old masters", nl: "Oude meesters" },
+  { id: "modern", en: "Modern", nl: "Modern" },
+  { id: "asian", en: "Asian art", nl: "Aziatische kunst" },
+  { id: "landscape", en: "Landscapes", nl: "Landschappen" },
+  { id: "sea", en: "Sea & water", nl: "Zee & water" },
+  { id: "city", en: "Cities & buildings", nl: "Steden & gebouwen" },
+  { id: "still-life", en: "Still life", nl: "Stilleven" },
+  { id: "flowers", en: "Flowers", nl: "Bloemen" },
+  { id: "portrait", en: "Portraits", nl: "Portretten" },
+  { id: "animals", en: "Animals", nl: "Dieren" },
+  { id: "religion", en: "Religion & myth", nl: "Religie & mythologie" },
 ] as const
-export type CategoryId = (typeof CATEGORIES)[number][0]
+export type CategoryId = (typeof CATEGORIES)[number]["id"]
+
+/** Bump when the rules change: stored categories are recomputed at boot. */
+export const CATEGORIZER_VERSION = "2"
+
+/** 0.1.x stored Dutch ids; rotation settings are mapped once. */
+export const LEGACY_CATEGORY_IDS: Record<string, string> = {
+  impressionisme: "impressionism",
+  "gouden-eeuw": "old-masters",
+  landschap: "landscape",
+  zee: "sea",
+  stilleven: "still-life",
+  bloemen: "flowers",
+  portret: "portrait",
+  japans: "asian",
+  modern: "modern",
+  alles: "all",
+  favorieten: "favourites",
+}
 
 const IMPRESSIONISTS = [
   "monet",
@@ -26,6 +51,7 @@ const IMPRESSIONISTS = [
   "manet",
   "cezanne",
   "van gogh",
+  "gogh",
   "gauguin",
   "seurat",
   "signac",
@@ -37,7 +63,6 @@ const IMPRESSIONISTS = [
   "hassam",
   "twachtman",
   "guillaumin",
-  "cross",
   "rysselberghe",
   "luce",
   "boudin",
@@ -53,6 +78,11 @@ const IMPRESSIONISTS = [
   "forain",
   "gonzales",
   "redon",
+  "kroyer",
+  "krøyer",
+  "ancher",
+  "tuxen",
+  "zorn",
 ]
 const MODERNISTS = [
   "kandinsky",
@@ -62,7 +92,6 @@ const MODERNISTS = [
   "malevich",
   "kupka",
   "delaunay",
-  "marc",
   "matisse",
   "derain",
   "vlaminck",
@@ -82,159 +111,329 @@ const MODERNISTS = [
   "sheeler",
   "van doesburg",
   "jawlensky",
+  "munch",
+  "hammershoi",
+  "hammershøi",
+  "nolde",
+  "marc",
 ]
-const GOLDEN_AGE_NATIONALITIES = ["dutch", "flemish", "netherlandish", "nederlands"]
+const ASIAN_CULTURES = ["japan", "china", "chinese", "korea", "india", "persia", "iran", "mughal", "tibet", "nepal"]
 
-const KEYWORDS: Record<"landschap" | "zee" | "stilleven" | "bloemen" | "portret", string[]> = {
-  landschap: [
+type SubjectId = "landscape" | "sea" | "city" | "still-life" | "flowers" | "portrait" | "animals" | "religion"
+
+const KEYWORDS: Record<SubjectId, string[]> = {
+  landscape: [
     "landscape",
-    "landschap",
     "view of",
-    "gezicht op",
     "river",
-    "rivier",
     "forest",
-    "bos",
     "woods",
     "valley",
-    "dal",
     "mountain",
     "mountains",
-    "berg",
-    "bergen",
     "field",
     "fields",
-    "veld",
     "meadow",
     "winter",
     "dunes",
-    "duinen",
-    "polder",
     "trees",
-    "bomen",
     "lake",
-    "meer",
     "countryside",
     "hills",
     "sunset",
-    "zonsondergang",
     "moonlight",
-    "maanlicht",
     "road",
-    "weg",
     "village",
-    "dorp",
     "farm",
     "garden",
-    "tuin",
     "park",
-    "canal",
-    "gracht",
-    "vaart",
     "mill",
-    "molen",
     "panorama",
     "vista",
+    "landschap",
+    "gezicht op",
+    "rivier",
+    "bos",
+    "berg",
+    "veld",
+    "duinen",
+    "bomen",
+    "tuin",
+    "molen",
+    "landskab",
+    "skov",
+    "bakke",
+    "paysage",
+    "foret",
+    "jardin",
+    "landschaft",
+    "wald",
+    "garten",
+    "paesaggio",
   ],
-  zee: [
+  sea: [
     "sea",
-    "zee",
     "seascape",
     "marine",
     "beach",
-    "strand",
     "ship",
     "ships",
-    "schip",
-    "schepen",
     "harbor",
     "harbour",
-    "haven",
     "coast",
-    "kust",
     "boat",
     "boats",
-    "boot",
-    "boten",
     "wave",
     "waves",
-    "golven",
     "storm",
     "shipwreck",
-    "schipbreuk",
     "fleet",
-    "vloot",
     "ocean",
     "estuary",
     "pier",
     "fishing",
-    "vissers",
+    "zee",
+    "strand",
+    "schip",
+    "schepen",
+    "haven",
+    "kust",
+    "boot",
+    "golven",
     "zeegezicht",
-    "rede",
+    "hav",
+    "kyst",
+    "skib",
+    "havn",
+    "mer",
+    "plage",
+    "bateau",
+    "schiff",
+    "mare",
   ],
-  stilleven: ["still life", "stilleven", "nature morte", "vanitas", "breakfast piece", "ontbijtje"],
-  bloemen: [
+  city: [
+    "city",
+    "street",
+    "town",
+    "square",
+    "church",
+    "cathedral",
+    "bridge",
+    "canal",
+    "palace",
+    "venice",
+    "paris",
+    "london",
+    "rome",
+    "amsterdam",
+    "stad",
+    "straat",
+    "kerk",
+    "brug",
+    "gracht",
+    "plein",
+    "gade",
+    "kirke",
+    "torv",
+    "rue",
+    "ville",
+    "eglise",
+    "pont",
+    "stadt",
+    "strasse",
+    "kirche",
+    "citta",
+  ],
+  "still-life": [
+    "still life",
+    "stilleven",
+    "nature morte",
+    "vanitas",
+    "breakfast piece",
+    "ontbijtje",
+    "opstilling",
+    "stilleben",
+    "natura morta",
+    "fruit",
+    "fruits",
+    "vruchten",
+    "frugt",
+  ],
+  flowers: [
     "flowers",
     "flower",
-    "bloemen",
-    "bloem",
     "bouquet",
-    "boeket",
     "roses",
-    "rozen",
     "irises",
     "lilies",
     "sunflowers",
-    "zonnebloemen",
     "tulips",
-    "tulpen",
     "peonies",
     "chrysanthemums",
     "poppies",
+    "bloemen",
+    "bloem",
+    "boeket",
+    "rozen",
+    "tulpen",
+    "zonnebloemen",
+    "blomster",
+    "blomst",
+    "roser",
+    "fleurs",
+    "blumen",
+    "fiori",
   ],
-  portret: [
+  portrait: [
     "portrait",
-    "portret",
     "self-portrait",
-    "zelfportret",
-    "bildnis",
     "madame",
     "monsieur",
     "mrs.",
     "mr.",
     "lady",
     "girl",
-    "meisje",
     "boy",
-    "jongen",
     "woman",
-    "vrouw",
     "man with",
     "head of",
+    "portret",
+    "zelfportret",
+    "meisje",
+    "jongen",
+    "vrouw",
+    "portraet",
+    "portræt",
+    "selvportræt",
+    "pige",
+    "dreng",
+    "kvinde",
+    "bildnis",
+    "ritratto",
+    "jeune fille",
+  ],
+  animals: [
+    "horse",
+    "horses",
+    "dog",
+    "dogs",
+    "cat",
+    "cats",
+    "cow",
+    "cows",
+    "cattle",
+    "sheep",
+    "bird",
+    "birds",
+    "deer",
+    "lion",
+    "tiger",
+    "hare",
+    "duck",
+    "ducks",
+    "hen",
+    "rooster",
+    "paard",
+    "paarden",
+    "hond",
+    "kat",
+    "koe",
+    "koeien",
+    "schapen",
+    "vogel",
+    "vogels",
+    "hest",
+    "heste",
+    "hund",
+    "koer",
+    "fugl",
+    "fugle",
+    "cheval",
+    "chien",
+    "pferd",
+    "kuh",
+  ],
+  religion: [
+    "madonna",
+    "virgin",
+    "saint",
+    "christ",
+    "crucifixion",
+    "annunciation",
+    "nativity",
+    "holy",
+    "adoration",
+    "resurrection",
+    "apostle",
+    "angel",
+    "angels",
+    "venus",
+    "jupiter",
+    "apollo",
+    "diana",
+    "bacchus",
+    "mythology",
+    "heilige",
+    "maria",
+    "kruisiging",
+    "aanbidding",
+    "engel",
+    "jomfru",
+    "kristus",
+    "hellige",
+    "sainte",
+    "vierge",
+    "heiliger",
   ],
 }
-const TAG_CATEGORIES: Record<string, string> = {
-  landscapes: "landschap",
-  mountains: "landschap",
-  trees: "landschap",
-  rivers: "landschap",
-  forests: "landschap",
-  fields: "landschap",
-  gardens: "landschap",
-  lakes: "landschap",
-  seascapes: "zee",
-  boats: "zee",
-  ships: "zee",
-  seas: "zee",
-  beaches: "zee",
-  waves: "zee",
-  "still life": "stilleven",
-  flowers: "bloemen",
-  portraits: "portret",
+const TAG_CATEGORIES: Record<string, SubjectId> = {
+  landscapes: "landscape",
+  mountains: "landscape",
+  trees: "landscape",
+  rivers: "landscape",
+  forests: "landscape",
+  fields: "landscape",
+  gardens: "landscape",
+  lakes: "landscape",
+  landscape: "landscape",
+  seascapes: "sea",
+  boats: "sea",
+  ships: "sea",
+  seas: "sea",
+  beaches: "sea",
+  waves: "sea",
+  cityscapes: "city",
+  architecture: "city",
+  "city views": "city",
+  streets: "city",
+  churches: "city",
+  "still life": "still-life",
+  flowers: "flowers",
+  portraits: "portrait",
+  portrait: "portrait",
+  horses: "animals",
+  dogs: "animals",
+  cats: "animals",
+  animals: "animals",
+  birds: "animals",
+  cows: "animals",
+  "christian iconography": "religion",
+  saints: "religion",
+  "virgin mary": "religion",
+  madonnas: "religion",
+  "jesus christ": "religion",
+  mythology: "religion",
+  "greek and roman mythology": "religion",
 }
 
 export function normalize(text: string): string {
-  return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()
+  return text
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/ø/g, "o")
+    .replace(/æ/g, "ae")
+    .replace(/å/g, "a")
+    .toLowerCase()
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -242,7 +441,8 @@ const patternCache = new Map<string[], RegExp>()
 function wordsPattern(words: string[]): RegExp {
   let re = patternCache.get(words)
   if (!re) {
-    re = new RegExp(`(?<![\\p{L}\\p{N}_-])(?:${words.map(escape).join("|")})(?![\\p{L}\\p{N}_-])`, "u")
+    const alternation = words.map((w) => escape(normalize(w))).join("|")
+    re = new RegExp(`(?<![\\p{L}\\p{N}_-])(?:${alternation})(?![\\p{L}\\p{N}_-])`, "u")
     patternCache.set(words, re)
   }
   return re
@@ -252,39 +452,36 @@ const hasWord = (haystack: string, words: string[]) => wordsPattern(words).test(
 export function categorize(art: Artwork): string[] {
   const title = normalize(art.title)
   const artist = normalize(art.artist)
-  const nationality = normalize(art.nationality)
-  const culture = normalize(`${art.culture} ${art.department}`)
+  const culture = normalize(`${art.culture} ${art.department} ${art.nationality}`)
   const medium = normalize(art.medium)
   const tags = new Set(art.tags.map(normalize))
   const year = art.year
   const cats: string[] = []
 
   if (
-    culture.includes("japan") ||
+    ASIAN_CULTURES.some((c) => culture.includes(c)) ||
     (culture.includes("asian art") && (medium.includes("woodblock") || medium.includes("ukiyo")))
   ) {
-    cats.push("japans")
-  } else if (hasWord(artist, IMPRESSIONISTS) && (year == null || (year >= 1855 && year <= 1925))) {
-    cats.push("impressionisme")
-  } else if (
-    year != null &&
-    year >= 1585 &&
-    year <= 1710 &&
-    (art.source === "rijks" || GOLDEN_AGE_NATIONALITIES.some((n) => nationality.includes(n)))
-  ) {
-    cats.push("gouden-eeuw")
+    cats.push("asian")
+  } else if (hasWord(artist, IMPRESSIONISTS) && (year == null || (year >= 1855 && year <= 1930))) {
+    cats.push("impressionism")
   } else if (hasWord(artist, MODERNISTS) || (year != null && year >= 1905)) {
     cats.push("modern")
+  } else if (year != null && year >= 1300 && year <= 1800) {
+    cats.push("old-masters")
   }
 
   for (const [cat, words] of Object.entries(KEYWORDS)) {
     if (hasWord(title, words) || [...tags].some((t) => TAG_CATEGORIES[t] === cat)) cats.push(cat)
   }
-  if (cats.includes("bloemen") && !cats.includes("stilleven") && /\bvase\b|\bvaas\b/.test(title)) cats.push("stilleven")
-  if (cats.includes("portret") && (cats.includes("landschap") || cats.includes("zee"))) {
+  if (cats.includes("flowers") && !cats.includes("still-life") && /\b(vase|vaas)\b/.test(title)) {
+    cats.push("still-life")
+  }
+  if (cats.includes("portrait") && (cats.includes("landscape") || cats.includes("sea"))) {
     // "Woman in a garden" is a scene, not a portrait.
-    if (!hasWord(title, ["portrait", "portret", "self-portrait", "zelfportret"]))
-      cats.splice(cats.indexOf("portret"), 1)
+    if (!hasWord(title, ["portrait", "portret", "self-portrait", "zelfportret", "portraet"])) {
+      cats.splice(cats.indexOf("portrait"), 1)
+    }
   }
   return [...new Set(cats)]
 }

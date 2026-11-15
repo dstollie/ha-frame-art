@@ -10,7 +10,12 @@ export const PREFIX = "frame_art"
 export const DISCOVERY = "homeassistant"
 export const AVAILABILITY = `${PREFIX}/status`
 
-export const ROTATION_OPTIONS = [["alles", "Alles"], ["favorieten", "Favorieten"], ...CATEGORIES] as const
+export const ROTATION_OPTIONS: readonly (readonly [string, string])[] = [
+  ["all", "All"],
+  ["favourites", "Favourites"],
+  ["collection", "My collection"],
+  ...CATEGORIES.map((c) => [c.id, c.en] as const),
+]
 export const LABEL_TO_ID: Record<string, string> = Object.fromEntries(
   ROTATION_OPTIONS.map(([id, label]) => [label, id]),
 )
