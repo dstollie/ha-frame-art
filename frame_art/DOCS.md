@@ -5,7 +5,7 @@ Open-access paintings (The Met, the Rijksmuseum and the Cleveland Museum of Art,
 ## Using it
 
 - Open **Frame Art** in the sidebar. **Ontdek** shows the catalogue by category, colour and search; **Verras me** picks something at random.
-- On a work, choose a **passe-partout** (licht, donker, blur, or vullend when the work is almost 16:9). Then tap **Zet op woonkamer** or **Zet op slaapkamer**. The add-on downloads the work, renders it to 3840×2160, switches the TV on if needed, uploads it, shows it and switches Art Mode on.
+- On a work, the preview shows how it will look. **Vullen (slim bijsnijden)** fills the whole screen with a crop that keeps the subject in frame; **Passe-partout** (licht, donker, blur) shows the whole work. Each TV has its own default under **Instellingen → Weergave**; on a work you can choose another mode for this one time. Then tap **Zet op woonkamer** or **Zet op slaapkamer**. The add-on downloads the work, renders it to 3840×2160, switches the TV on if needed, uploads it, shows it and switches Art Mode on.
 - **Favorieten** and **Geschiedenis** have their own page. Under **Instellingen** you pair each TV and choose the rotation category.
 
 ## Pairing (once per TV)
