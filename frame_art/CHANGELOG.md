@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Fix: the Supervisor watchdog checked `/api/config`, which needs a login since 0.2.0, so it restarted the add-on every few minutes. Panel requests failed in between (empty Art sources, catalogue stuck on "…") and a refresh never finished. The watchdog now uses `/healthz`.
+- Settings shows an error when the add-on can't be reached, and "Refresh now" confirms it started.
+- The TV's routine broadcasts (image_selected, recently_set_updated, art_mode_changed, …) are no longer logged; set `FRAME_ART_DEBUG` to see them.
+
 ## 0.3.0
 
 - **Series:** playlists of works that rotate on one or more TVs. Make one from a work (**Add to series**, **New series**), from search results or from an album. A **Series** tab and a page per series: reorder by dragging, a duration per series and per work, shuffle, **Play on …**, and now/next with pause, next and stop.
