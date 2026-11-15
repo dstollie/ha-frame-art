@@ -1,6 +1,15 @@
-# Web app under ingress
+# The panel (native HA) and the ingress page
 
 ## Principles
+
+### Two hosts, one bundle
+`<frame-art-panel>` runs as a custom panel inside HA (browser history under `/frame-art`, API at `/api/frame_art/api` through `hass.fetchWithAuth`) and as the ingress page (`standalone` attribute, hash history, API relative to the page). `lib/env.ts` decides; components never build URLs themselves (`apiUrl`, `api()`).
+
+### HA's look, HA's elements
+Use the wrappers in `components/ha.tsx` (`Card`, `Button`, `Switch`, `Alert`, …): they render HA's element when it's defined and a fallback styled with the same theme variables otherwise. Never hard-code colours; use the Tailwind tokens mapped to HA variables (`bg-card`, `text-text2`, `border-divider`, `text-primary`). See @knowledge/codebase/05-adr-native-panel.md.
+
+### Language follows HA
+Strings live in `lib/i18n.ts` (English, Dutch). Add a key to `en`; TypeScript forces the `nl` entry.
 
 ### Nothing absolute
 HA serves the panel at `/api/hassio_ingress/<token>/`, and the token differs per install.

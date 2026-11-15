@@ -36,6 +36,19 @@ erDiagram
     text mode
     real shown_at
   }
+  source_settings {
+    text id PK "provider id"
+    integer enabled
+    text api_key "never sent to the browser"
+  }
+  albums {
+    text id PK
+    text name
+  }
+  album_items {
+    text album_id PK
+    text artwork_id PK
+  }
   meta {
     text key PK "last_sync, category:<tv>"
     text value
@@ -43,9 +56,15 @@ erDiagram
   artworks ||--o| favourites : "is"
   artworks ||--o{ uploads : "uploaded as"
   artworks ||--o{ history : "shown"
+  albums ||--o{ album_items : "holds"
+  artworks ||--o{ album_items : "in"
 ```
 
 ## Rules
+
+- **Ids are English and stable.** Categories (`impressionism`, `old-masters`, …) and colour families (`red`, `gold`, …) are labelled per UI language in the web app. `migrate()` recomputes categories and colours when `CATEGORIZER_VERSION` changes and maps 0.1.x Dutch ids in `meta` (rotation).
+- **Licence per work** (`licence`): "CC0", "Public domain" or "Yours" (My collection).
+- **My collection** works have `source = "mine"` and `image_url`/`thumb_url` like `collection:<file>`.
 
 - **Upsert never wipes knowledge:** `aspect` and `max_px` use `COALESCE(excluded, existing)`.
 - **"Liggend" means 1.2 ≤ aspect ≤ 2.8.** Wider (handscrolls) and narrower (portrait) works stay browsable with the switch off.

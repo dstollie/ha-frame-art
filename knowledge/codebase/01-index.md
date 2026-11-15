@@ -19,6 +19,11 @@ Foundational knowledge about how Frame Art is put together. Load the file that m
 **Keywords:** database, schema, drizzle, table, artworks, uploads, history, favourites, meta, categories
 **When to use:** touching `db.ts`, queries, filters or anything stored in SQLite
 
+### ADR: native HA panel
+**File:** @knowledge/codebase/05-adr-native-panel.md
+**Keywords:** panel, native, integration, hacs, ingress, theme, ha-card, ha-button, web component, shadow dom
+**When to use:** changing the UI shell, the integration, or deciding whether to use another HA element
+
 ## Loading Logic
 
 1. **Primary:** Match keywords from the request

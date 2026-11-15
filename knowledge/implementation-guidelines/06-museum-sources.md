@@ -1,9 +1,12 @@
-# Museum sources and the catalogue
+# Art providers and the catalogue
 
 ## Principles
 
 ### A source must earn its place
 Only add a source that: (1) has a per-work open licence we can filter on (CC0 or public domain), (2) serves images of at least about 3000 px to a server without a browser challenge, and (3) has stable IDs. See @knowledge/external/museum-apis/sources.md for the comparison, including why the Art Institute of Chicago, Europeana and Wikimedia are out.
+
+### One file per provider
+Implement `ArtProvider` (`providers/types.ts`) in `providers/<id>.ts` and add it to `providers/registry.ts`. Settings, sync, search, rendering, MCP and the TVs pick it up from the registry. A provider that needs a key declares `apiKey`; it can't be enabled without one. Thumbnails the browser can't load (blocked CDN, required headers) get `thumbnails: "proxy"`.
 
 ### Pure parser, thin harvester
 ```ts

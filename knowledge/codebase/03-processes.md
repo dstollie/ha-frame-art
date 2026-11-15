@@ -37,6 +37,10 @@ sequenceDiagram
 - A failing cleanup never fails the job; the next job retries.
 - `fill` is downgraded to `light` when the work's aspect is outside 1.5–2.1.
 
+## Display mode
+
+`modeFor(tv, wanted?)`: an explicit mode on the request wins ("this time with a passe-partout", MCP `display`), otherwise the TV's setting (`meta display:<tv>`: `fill` or `matte` + style). `fill` uses sharp's attention crop to exactly 3840×2160 for every aspect ratio; `GET /artworks/:id/crop` returns the same window (from the thumbnail) for the preview.
+
 ## Pairing
 
 ```mermaid
@@ -61,14 +65,19 @@ sequenceDiagram
 
 ## Catalogue sync
 
+- Iterates the **enabled** providers (`Sources`, settings in SQLite) in registry order, passing each its API key.
 - Runs at start when the catalogue is empty (or with `sync_on_start`), then every night at `sync_hour`.
-- Harvesters, in order: Cleveland (paged, cheap), the Met (`/v1.1/search` ID lists, then one object per ID), the Rijksmuseum (Linked Art search pages, then one object per ID). Each skips IDs it already knows.
+- Each provider skips IDs it already knows (`known`), so only the first sync of a source is long.
 - One museum failing never stops the others; the error shows under Instellingen.
 - Between syncs, `enrichColors` downloads thumbnails slowly (1 per second) for the dominant colour and a missing aspect.
 
 ## Rotation (HA / Node-RED)
 
 `button.frame_art_<tv>_nieuw` → MQTT `frame_art/<tv>/new/set` → `pickNext`: a random work from the TV's rotation category (`select.frame_art_<tv>_rotatie`), landscape-friendly, not among the last 60 shown on that TV → a normal job in `default_mode`.
+
+## MCP
+
+`/mcp` (or `/api/frame_art/mcp` through the integration): stateless streamable HTTP, one `McpServer` per request, JSON responses. The token is the MCP token from Settings (Bearer or `?token=`). `show_artwork` and `upload_image` submit normal jobs and wait for them (max 2 minutes).
 
 ## Release
 

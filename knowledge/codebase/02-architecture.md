@@ -2,6 +2,8 @@
 
 ## Overview
 
+Since 0.2.0 there are two parts: the **add-on** (this Node process: API, catalogue, rendering, TV I/O, MCP) and the **integration** (`custom_components/frame_art`, Python) that registers a native sidebar panel and proxies `/api/frame_art/api/*`, `/api/frame_art/mcp` and `/api/frame_art/panel.js` to the add-on with an internal token from Supervisor discovery. See @knowledge/codebase/05-adr-native-panel.md. The diagram below shows the add-on itself.
+
 Frame Art is one Node process inside a Home Assistant add-on container. It serves a Hono API under `/api` and the built web app as static files. Home Assistant reaches it through **ingress** (sidebar panel, also over Nabu Casa); nothing else is exposed.
 
 ```mermaid
@@ -43,7 +45,8 @@ flowchart LR
 |---|---|---|
 | `@frame-art/frame-tv` | The art-channel protocol (connect, token, requests, D2D upload) and a `FakeFrame` that speaks it. No app logic. | `ws` |
 | `@frame-art/server` | Hono app, catalogue sources, categories, SQLite, render, jobs, sync, MQTT, Supervisor calls. Exports types only to the web app (`./api`, `./geometry`, `./models`). | frame-tv, sharp, better-sqlite3, drizzle, mqtt |
-| `web` | The gallery UI. Only talks to the API through `hc<ApiType>`. | server (types + geometry only) |
+| `web` | The panel: a `<frame-art-panel>` web component (React in a shadow root) built as one ES module. Only talks to the API through `hc<ApiType>`. | server (types + geometry only) |
+| `custom_components/frame_art` | HA integration: config flow (Supervisor discovery), proxy views, panel registration. | Home Assistant |
 
 ## Decisions that shape the code
 
@@ -59,6 +62,7 @@ flowchart LR
 | Path | What |
 |---|---|
 | `options.json` | Add-on options, written by the Supervisor, validated by zod in `config.ts` |
-| `frame_art.sqlite` | Catalogue, favourites, uploads, history, meta |
+| `frame_art.sqlite` | Catalogue, favourites, uploads, history, source settings, albums, meta (tokens, display modes, rotation) |
+| `collection/` | My collection: `<uuid>.jpg` (≤ 6000 px) and `<uuid>_thumb.jpg`; never pruned |
 | `tokens/<tv>.token` | Art-channel token per TV (mode 600) |
-| `cache/sources`, `cache/renders` | LRU disk cache, capped by `cache_mb` |
+| `cache/sources`, `cache/renders`, `cache/thumbs` | LRU disk cache, capped by `cache_mb` |
