@@ -1,0 +1,93 @@
+frame_art/packages/web/.gitignore
+  s_e57963d2c3d792::t_8062cd3056b8ea 1
+frame_art/packages/web/components.json
+  s_e57963d2c3d792::t_7cbe1d2d86d226 1-25
+frame_art/packages/web/e2e/app.spec.ts
+  s_e57963d2c3d792::t_a224aa76b184bd 1-102
+frame_art/packages/web/index.html
+  s_e57963d2c3d792::t_405f6b1c8c9b76 1-14
+frame_art/packages/web/package.json
+  s_e57963d2c3d792::t_1f00afcdfbecc6 1-44
+frame_art/packages/web/playwright.config.ts
+  s_e57963d2c3d792::t_bb6189163875c6 1-22
+frame_art/packages/web/public/favicon.svg
+  s_e57963d2c3d792::t_f50c6d8bd2b8c5 1
+frame_art/packages/web/src/components/app-shell.tsx
+  s_e57963d2c3d792::t_6b27de4537fd0d 1-74
+frame_art/packages/web/src/components/artwork-card.tsx
+  s_e57963d2c3d792::t_d2da830aefde64 1-53
+frame_art/packages/web/src/components/artwork-grid.tsx
+  s_e57963d2c3d792::t_9af84c89aae0c0 1-90
+frame_art/packages/web/src/components/frame-preview.tsx
+  s_e57963d2c3d792::t_2ecd6ecb85a059 1-92
+frame_art/packages/web/src/components/on-the-wall.tsx
+  s_e57963d2c3d792::t_e3604dbf0002c9 1-82
+frame_art/packages/web/src/components/send-panel.tsx
+  s_e57963d2c3d792::t_4453a7dd7194d4 1-132
+frame_art/packages/web/src/components/ui/badge.tsx
+  s_e57963d2c3d792::t_b0d9ba7e9eb56a 1-39
+frame_art/packages/web/src/components/ui/button.tsx
+  s_e57963d2c3d792::t_20bb144be6f323 1-64
+frame_art/packages/web/src/components/ui/card.tsx
+  s_e57963d2c3d792::t_d2e55238a65124 1-69
+frame_art/packages/web/src/components/ui/input.tsx
+  s_e57963d2c3d792::t_243bd95b450de8 1-18
+frame_art/packages/web/src/components/ui/progress.tsx
+  s_e57963d2c3d792::t_6ce069f69294b7 1-23
+frame_art/packages/web/src/components/ui/select.tsx
+  s_e57963d2c3d792::t_6d0688c673abc6 1-166
+frame_art/packages/web/src/components/ui/separator.tsx
+  s_e57963d2c3d792::t_6ac402f9f4b427 1-27
+frame_art/packages/web/src/components/ui/skeleton.tsx
+  s_e57963d2c3d792::t_6bb87da2fc065f 1-7
+frame_art/packages/web/src/components/ui/sonner.tsx
+  s_e57963d2c3d792::t_384a92f6780a5c 1-27
+frame_art/packages/web/src/components/ui/switch.tsx
+  s_e57963d2c3d792::t_47f57cf0e0c939 1-32
+frame_art/packages/web/src/components/ui/toggle-group.tsx
+  s_e57963d2c3d792::t_37aadbcc57d35f 1-86
+frame_art/packages/web/src/components/ui/toggle.tsx
+  s_e57963d2c3d792::t_1317b1c7be5eaf 1-38
+frame_art/packages/web/src/components/ui/tooltip.tsx
+  s_e57963d2c3d792::t_20bc8983b65da1 1-41
+frame_art/packages/web/src/index.css
+  s_e57963d2c3d792::t_8c7bd64216f1e8 1-169
+frame_art/packages/web/src/lib/api.ts
+  s_e57963d2c3d792::t_c63b8a82009ee0 1-198
+frame_art/packages/web/src/lib/utils.ts
+  s_e57963d2c3d792::t_ae12590cc5887b 1
+frame_art/packages/web/src/main.tsx
+  s_e57963d2c3d792::t_f1c6625c0219af 1-24
+frame_art/packages/web/src/pages/artwork.tsx
+  s_e57963d2c3d792::t_6b7201abfc01b8 1-190
+frame_art/packages/web/src/pages/discover.tsx
+  s_e57963d2c3d792::t_d5ecb78ba2bf83 1-185
+frame_art/packages/web/src/pages/favourites.tsx
+  s_e57963d2c3d792::t_17bfa16732beb3 1-36
+frame_art/packages/web/src/pages/history.tsx
+  s_e57963d2c3d792::t_1f6966eb3c5061 1-77
+frame_art/packages/web/src/pages/settings.tsx
+  s_e57963d2c3d792::t_a1ff0d540711ff 1-161
+frame_art/packages/web/src/router.tsx
+  s_e57963d2c3d792::t_56a9fd4ce132ff 1-62
+frame_art/packages/web/tsconfig.json
+  s_e57963d2c3d792::t_b4bd9565b05fb3 1-24
+frame_art/packages/web/vite.config.ts
+  s_e57963d2c3d792::t_1e6c06e424e896 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66cccb0d12297ff1f52a8bb38e4a95420e1fbe38",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
