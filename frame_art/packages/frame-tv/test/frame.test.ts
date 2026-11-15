@@ -147,6 +147,21 @@ describe("art requests", () => {
     expect(await client.deleteImages([])).toBe(true)
   })
 
+  it("lists the content ids of My Photos, so a work already on the TV can be selected instead of uploaded", async () => {
+    const t = await fake()
+    client = await connect(t, { token: t.token })
+    const a = await client.upload(Buffer.alloc(1000, 1))
+    expect(await client.contentIds()).toEqual([a])
+    await client.deleteImages([a])
+    expect(await client.contentIds()).toEqual([])
+  })
+
+  it("fails contentIds when the TV refuses the request", async () => {
+    const t = await fake({ failRequests: { get_content_list: "-1" } })
+    client = await connect(t, { token: t.token })
+    await expect(client.contentIds()).rejects.toBeInstanceOf(FrameError)
+  })
+
   it("turns a TV error into a FrameError naming the request", async () => {
     const t = await fake({ failRequests: { select_image: "-11" } })
     client = await connect(t, { token: t.token })

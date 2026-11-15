@@ -380,6 +380,18 @@ export class FrameArtClient {
     return data.value === "on"
   }
 
+  /** Content ids in "My Photos" (MY-C0002), where our uploads live. */
+  async contentIds(): Promise<string[]> {
+    const data = await this.request("get_content_list", { category: "MY-C0002" })
+    const list = parseMaybeJson<unknown>(data.content_list)
+    if (!Array.isArray(list)) throw new FrameError("Geen content_list in antwoord", "response")
+    return list.flatMap((item) => {
+      if (typeof item !== "object" || item === null) return []
+      const { content_id: id, category_id: cat } = item as Record<string, unknown>
+      return typeof id === "string" && (cat === undefined || cat === "MY-C0002") ? [id] : []
+    })
+  }
+
   async deleteImages(contentIds: string[]): Promise<boolean> {
     if (!contentIds.length) return true
     const list = contentIds.map((content_id) => ({ content_id }))

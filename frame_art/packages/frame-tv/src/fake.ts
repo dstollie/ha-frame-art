@@ -196,6 +196,10 @@ export class FakeFrame {
         )
       case "get_artmode_status":
         return this.d2d(ws, { event: "get_artmode_status", request_id: id, id, value: this.artMode ? "on" : "off" })
+      case "get_content_list": {
+        const list = [...this.images.keys()].map((content_id) => ({ content_id, category_id: "MY-C0002" }))
+        return this.d2d(ws, { event: "get_content_list", request_id: id, id, content_list: JSON.stringify(list) })
+      }
       case "delete_image_list": {
         const list = req.content_id_list as Array<{ content_id: string }>
         for (const { content_id } of list) this.images.delete(content_id)
