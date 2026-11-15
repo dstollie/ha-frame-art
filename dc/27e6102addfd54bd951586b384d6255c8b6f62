@@ -1,0 +1,19 @@
+frame_art/translations/en.yaml
+  s_e57963d2c3d792::t_7479ccfc2f5dc8 3-4,6-7,9-10,12,16,18,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc27e6102addfd54bd951586b384d6255c8b6f62",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
