@@ -1,0 +1,29 @@
+frame_art/packages/server/scripts/dev-stack.ts
+  s_e57963d2c3d792::t_3fdbaceb603d31 106
+frame_art/packages/server/src/app.ts
+  s_e57963d2c3d792::t_58f3a4362c92b1 17-29,54-59,104-123,125-144,151,238,246-247,263,271-280
+frame_art/packages/server/src/jobs.ts
+  s_e57963d2c3d792::t_7e039feafb9be9 9
+frame_art/packages/server/src/render.ts
+  s_e57963d2c3d792::t_dd1b1e84c701a7 8,126-169
+frame_art/packages/server/test/e2e.test.ts
+  s_e57963d2c3d792::t_7a23deff17d2ef 40-48,53,64,145-170,223,229-252
+frame_art/packages/server/test/render.test.ts
+  s_e57963d2c3d792::t_dcfd398eeb79c9 15-16,34-54,115-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4113af028acfad49f8a621ffacee534ab228da79",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
