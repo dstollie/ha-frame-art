@@ -22,8 +22,8 @@ describe("store", () => {
   it("categorises on upsert and is idempotent", () => {
     const s = seeded()
     expect(s.count()).toBe(4)
-    expect(s.get("met:1")!.categories).toContain("impressionisme")
-    expect(s.get("rijks:3")!.categories).toContain("gouden-eeuw")
+    expect(s.get("met:1")!.categories).toContain("impressionism")
+    expect(s.get("rijks:3")!.categories).toContain("old-masters")
     s.upsertArtworks([art("met:1", { title: "Water Lilies (Nymphéas)", aspect: null })])
     expect(s.count()).toBe(4)
     expect(s.get("met:1")!.title).toBe("Water Lilies (Nymphéas)")
@@ -36,11 +36,11 @@ describe("store", () => {
     expect(ids(s, { landscape: true })).toEqual(new Set(["met:1", "cleveland:4"])) // 5:1 scroll is not "liggend"
     s.setHidden("cleveland:6", true)
     expect(ids(s, { landscape: true })).toEqual(new Set(["met:1", "cleveland:4"]))
-    expect(ids(s, { category: "gouden-eeuw" })).toEqual(new Set(["rijks:3"]))
+    expect(ids(s, { category: "old-masters" })).toEqual(new Set(["rijks:3"]))
     expect(ids(s, { q: "manet cafe" })).toEqual(new Set(["cleveland:4"]))
     expect(ids(s, { source: "met" })).toEqual(new Set(["met:1", "met:2"]))
-    s.setColor("met:2", "#3050a0", "blauw")
-    expect(ids(s, { color: "blauw" })).toEqual(new Set(["met:2"]))
+    s.setColor("met:2", "#3050a0", "blue")
+    expect(ids(s, { color: "blue" })).toEqual(new Set(["met:2"]))
     s.setHidden("met:2", true)
     expect(ids(s, {})).toEqual(new Set(["met:1", "rijks:3", "cleveland:4"]))
   })
@@ -79,5 +79,46 @@ describe("store", () => {
   it("random respects exclusions", () => {
     const s = seeded()
     for (let i = 0; i < 10; i++) expect(s.random({ landscape: true }, new Set(["met:1"]))!.id).toBe("cleveland:4")
+  })
+})
+
+describe("migration from 0.1.x", () => {
+  it("recomputes Dutch categories and colours to English ids and maps rotation settings", () => {
+    const file = path.join(tempSettings().dataDir, "old.sqlite")
+    const old = new Store(file)
+    old.upsertArtworks([
+      art("rijks:9", { title: "Gezicht op Delft", artist: "Johannes Vermeer", year: 1660, aspect: 1.2 }),
+    ])
+    old.sqlite
+      .prepare(
+        "UPDATE artworks SET categories = ',gouden-eeuw,landschap,', color_hex = '#a03020', color_family = 'rood'",
+      )
+      .run()
+    old.setMeta("category:woonkamer", "gouden-eeuw")
+    old.setMeta("category:slaapkamer", "favorieten")
+    old.sqlite.prepare("DELETE FROM meta WHERE key = 'categorizer_version'").run()
+    old.close()
+
+    const s = new Store(file)
+    const a = s.get("rijks:9")!
+    expect(a.categories).toEqual(expect.arrayContaining(["old-masters", "landscape"]))
+    expect(a.categories).not.toContain("gouden-eeuw")
+    expect(a.colorFamily).toBe("red")
+    expect(s.getMeta("category:woonkamer")).toBe("old-masters")
+    expect(s.getMeta("category:slaapkamer")).toBe("favourites")
+    expect(a.licence).toBe("")
+  })
+
+  it("keeps albums and their items in order", () => {
+    const s = seeded()
+    s.createAlbum("a1", "Zomer")
+    s.setAlbumItem("a1", "met:1", true)
+    s.setAlbumItem("a1", "met:2", true)
+    expect(s.albums()).toEqual([{ id: "a1", name: "Zomer", count: 2, cover: expect.any(String) }])
+    expect(ids(s, { album: "a1" })).toEqual(new Set(["met:1", "met:2"]))
+    s.setAlbumItem("a1", "met:1", false)
+    expect(s.albumsOf("met:1")).toEqual([])
+    s.deleteAlbum("a1")
+    expect(s.albums()).toEqual([])
   })
 })

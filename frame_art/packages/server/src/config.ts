@@ -61,11 +61,13 @@ export const paths = (s: Pick<Settings, "dataDir">) => ({
   tokens: path.join(s.dataDir, "tokens"),
   sources: path.join(s.dataDir, "cache", "sources"),
   renders: path.join(s.dataDir, "cache", "renders"),
+  thumbs: path.join(s.dataDir, "cache", "thumbs"),
+  collection: path.join(s.dataDir, "collection"),
 })
 
 export function ensureDirs(s: Pick<Settings, "dataDir">) {
   const p = paths(s)
-  for (const d of [p.tokens, p.sources, p.renders]) mkdirSync(d, { recursive: true })
+  for (const d of [p.tokens, p.sources, p.renders, p.thumbs, p.collection]) mkdirSync(d, { recursive: true })
 }
 
 export function loadSettings(dataDir = process.env.FRAME_ART_DATA ?? "/data"): Settings {
