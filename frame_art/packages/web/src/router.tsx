@@ -12,6 +12,8 @@ import { ArtworkPage } from "@/pages/artwork"
 import { CollectionPage } from "@/pages/collection"
 import { ExplorePage } from "@/pages/explore"
 import { HistoryPage } from "@/pages/history"
+import { SeriesPage } from "@/pages/series"
+import { SeriesDetailPage } from "@/pages/series-detail"
 import { SettingsPage } from "@/pages/settings"
 
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined)
@@ -64,10 +66,28 @@ const collectionRoute = createRoute({
   },
 })
 
+const seriesRoute = createRoute({ getParentRoute: () => rootRoute, path: "/series", component: SeriesPage })
+const seriesDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/series/$id",
+  component: function SeriesDetail() {
+    const { id } = seriesDetailRoute.useParams()
+    return <SeriesDetailPage key={id} id={id} />
+  },
+})
+
 const historyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/history", component: HistoryPage })
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage })
 
-const routeTree = rootRoute.addChildren([exploreRoute, artworkRoute, collectionRoute, historyRoute, settingsRoute])
+const routeTree = rootRoute.addChildren([
+  exploreRoute,
+  artworkRoute,
+  collectionRoute,
+  seriesRoute,
+  seriesDetailRoute,
+  historyRoute,
+  settingsRoute,
+])
 
 /** Browser history under the panel's URL inside HA; hash history on the ingress page. */
 export function createAppRouter(history: "browser" | "hash", basepath: string) {

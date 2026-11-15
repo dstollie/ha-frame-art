@@ -37,6 +37,10 @@ export type HistoryItem = InferResponseType<Client["history"]["$get"]>[number]
 export type SyncState = InferResponseType<Client["sync"]["$get"]>
 export type SourceSetting = InferResponseType<Client["settings"]["sources"]["$get"]>[number]
 export type Album = InferResponseType<Client["albums"]["$get"]>[number]
+export type SeriesSummary = InferResponseType<Client["series"]["$get"]>[number]
+export type SeriesDetail = InferResponseType<Client["series"][":id"]["$get"], 200>
+export type Playback = NonNullable<TvState["playback"]>
+export type PlaybackAction = "pause" | "resume" | "next" | "stop"
 
 export interface BrowseFilters {
   cat?: string | undefined
@@ -62,6 +66,8 @@ export const keys = {
   sources: ["sources"] as const,
   albums: ["albums"] as const,
   mcp: ["mcp"] as const,
+  seriesList: ["series"] as const,
+  series: (id: string) => ["series", id] as const,
 }
 
 export const useConfig = () =>
@@ -390,3 +396,101 @@ export function gridThumb(thumb: string, source: string): string {
   if (source === "rijks") return thumb.replace("/full/!800,800/", "/full/!520,520/")
   return thumb
 }
+
+// ------------------------------------------------------------------ series
+
+export const useSeriesList = () =>
+  useQuery({ queryKey: keys.seriesList, queryFn: async () => ok(await api().series.$get()), refetchInterval: 15_000 })
+
+export const useSeries = (id: string) =>
+  useQuery({
+    queryKey: keys.series(id),
+    queryFn: async () => ok(await api().series[":id"].$get({ param: { id } })),
+  })
+
+export type SeriesSource = { artworkIds: string[] } | { albumId: string } | { query: BrowseFilters }
+
+export function useSeriesMutations() {
+  const qc = useQueryClient()
+  const done = (detail?: SeriesDetail) => {
+    if (detail) qc.setQueryData(keys.series(detail.id), detail)
+    void qc.invalidateQueries({ queryKey: keys.seriesList })
+    void qc.invalidateQueries({ queryKey: ["artwork"] })
+    void qc.invalidateQueries({ queryKey: keys.tvs })
+  }
+  return {
+    create: useMutation({
+      mutationFn: async ({ name, from }: { name: string; from?: SeriesSource }) => {
+        const body =
+          from && "query" in from
+            ? {
+                query: {
+                  ...(from.query.cat ? { category: from.query.cat } : {}),
+                  ...(from.query.color ? { color: from.query.color } : {}),
+                  ...(from.query.q ? { q: from.query.q } : {}),
+                  ...(from.query.source ? { source: from.query.source } : {}),
+                  ...(from.query.all || from.query.source === "mine" ? {} : { landscape: "1" as const }),
+                },
+              }
+            : (from ?? {})
+        return ok(await api().series.$post({ json: { name, ...body } }))
+      },
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: async ({ id, ...patch }: { id: string; name?: string; duration?: number; shuffle?: boolean }) =>
+        ok(await api().series[":id"].$patch({ param: { id }, json: patch })),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => ok(await api().series[":id"].$delete({ param: { id } })),
+      onSuccess: () => done(),
+    }),
+    toggleItem: useMutation({
+      mutationFn: async ({ id, artworkId, on }: { id: string; artworkId: string; on: boolean }) =>
+        on
+          ? ok(await api().series[":id"].items.$post({ param: { id }, json: { artworkId } }))
+          : ok(await api().series[":id"].items[":artworkId"].$delete({ param: { id, artworkId } })),
+      onSuccess: done,
+    }),
+    itemDuration: useMutation({
+      mutationFn: async ({ id, artworkId, duration }: { id: string; artworkId: string; duration: number | null }) =>
+        ok(await api().series[":id"].items[":artworkId"].$patch({ param: { id, artworkId }, json: { duration } })),
+      onSuccess: done,
+    }),
+    reorder: useMutation({
+      mutationFn: async ({ id, artworkIds }: { id: string; artworkIds: string[] }) =>
+        ok(await api().series[":id"].order.$put({ param: { id }, json: { artworkIds } })),
+      onMutate: ({ id, artworkIds }) => {
+        qc.setQueryData<SeriesDetail>(keys.series(id), (old) =>
+          old
+            ? {
+                ...old,
+                items: artworkIds.flatMap((a) => old.items.filter((i) => i.artwork.id === a)),
+              }
+            : old,
+        )
+      },
+      onSuccess: done,
+    }),
+    play: useMutation({
+      mutationFn: async ({ id, tvs }: { id: string; tvs: string[] }) =>
+        ok(await api().series[":id"].play.$post({ param: { id }, json: { tvs } })),
+      onSuccess: () => done(),
+    }),
+  }
+}
+
+export function usePlaybackControl() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ tv, action }: { tv: string; action: PlaybackAction }) =>
+      ok(await api().tvs[":tv"].playback.$post({ param: { tv }, json: { action } })),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.tvs })
+      void qc.invalidateQueries({ queryKey: keys.seriesList })
+    },
+  })
+}
+
+export const DURATIONS = [60, 300, 900, 1800, 3600, 7200, 21600, 43200, 86400] as const

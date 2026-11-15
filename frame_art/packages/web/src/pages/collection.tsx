@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 
 import { ArtworkGrid } from "@/components/artwork-grid"
 import { Alert, Button, Card, Chip, cn, Icon, IconButton, Spinner, TextField } from "@/components/ha"
+import { CreateSeriesButton } from "@/components/series"
 import { useAlbumMutations, useAlbums, useArtworks, useUpload } from "@/lib/api"
 import { useT } from "@/lib/i18n"
 
@@ -124,7 +125,8 @@ export function CollectionPage({ album }: { album: string | undefined }) {
           </Button>
         )}
         {current && !naming && (
-          <span className="ml-auto flex">
+          <span className="ml-auto flex items-center">
+            <CreateSeriesButton label={t.seriesFromAlbum} name={current.name} from={{ albumId: current.id }} />
             <IconButton
               path={mdiPencil}
               label={t.rename}

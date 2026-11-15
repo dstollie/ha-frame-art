@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { ArtworkGrid } from "@/components/artwork-grid"
 import { Alert, Button, Chip, cn, Icon, Select, Spinner, Switch, TextField } from "@/components/ha"
+import { CreateSeriesButton } from "@/components/series"
 import { NowShowing } from "@/components/tv-actions"
 import { randomArtwork, useArtworks, useConfig, useSync, type BrowseFilters } from "@/lib/api"
 import { useLanguage } from "@/lib/hass"
@@ -126,7 +127,21 @@ export function ExplorePage({ filters }: { filters: BrowseFilters }) {
             />
             {t.landscapeOnly}
           </label>
-          <span className="ml-auto text-sm text-text2">{t.works(total)}</span>
+          <span className="ml-auto flex items-center gap-2 text-sm text-text2">
+            {(filters.q || filters.cat || filters.color || filters.source) && total > 0 && (
+              <CreateSeriesButton
+                label={t.seriesFromResults}
+                name={
+                  filters.q ??
+                  config.data?.categories.find((c) => c.id === filters.cat)?.label[lang] ??
+                  filters.source ??
+                  t.series
+                }
+                from={{ query: filters }}
+              />
+            )}
+            {t.works(total)}
+          </span>
         </div>
       </section>
 

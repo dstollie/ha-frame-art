@@ -16,6 +16,7 @@ export function Shell() {
   const tabs = [
     { to: "/", label: t.tabExplore, active: path === "/" || path.startsWith("/art") },
     { to: "/collection", label: t.tabCollection, active: path.startsWith("/collection") },
+    { to: "/series", label: t.tabSeries, active: path.startsWith("/series") },
     { to: "/history", label: t.tabHistory, active: path.startsWith("/history") },
     { to: "/settings", label: t.tabSettings, active: path.startsWith("/settings") },
   ] as const

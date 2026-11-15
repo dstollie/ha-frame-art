@@ -5,6 +5,7 @@ const en = {
   appTitle: "Frame Art",
   tabExplore: "Explore",
   tabCollection: "My collection",
+  tabSeries: "Series",
   tabHistory: "History",
   tabSettings: "Settings",
   nowShowing: "Now showing",
@@ -119,6 +120,51 @@ const en = {
     light: "Light",
   } as Record<string, string>,
   errorGeneric: "Something went wrong",
+  series: "Series",
+  seriesHelp: "A series rotates works on a TV: in order or shuffled, each for as long as you choose.",
+  newSeries: "New series",
+  addToSeries: "Add to series",
+  seriesName: "Series name",
+  create: "Create",
+  addedTo: (name: string) => `Added to ${name}`,
+  openSeries: "Open series",
+  noSeries: "No series yet. Open a work and choose New series, or make one from search results or an album.",
+  seriesFromResults: "Series from these results",
+  seriesFromAlbum: "Series from this album",
+  worksCount: (n: number) => `${n} ${n === 1 ? "work" : "works"}`,
+  each: (d: string) => `${d} each`,
+  total: (d: string) => `${d} in total`,
+  eachWork: "Each work",
+  durationOf: (title: string) => `Duration of ${title}`,
+  seriesDefault: (d: string) => `Series (${d})`,
+  shuffle: "Shuffle",
+  playOn: (tv: string) => `Play on ${tv}`,
+  playingOn: (tv: string) => `Playing on ${tv}`,
+  playing: "Playing",
+  paused: "Paused",
+  nextUp: (title: string) => `Next: ${title}`,
+  nextAt: (time: string) => `at ${time}`,
+  pause: "Pause",
+  resume: "Resume",
+  nextWork: "Next",
+  stop: "Stop",
+  remove: (title: string) => `Remove ${title}`,
+  moveUp: "Move up",
+  moveDown: "Move down",
+  dragHint: "Drag to reorder",
+  deleteSeries: "Delete series",
+  deleteSeriesConfirm: "Delete this series? It stops on every TV.",
+  emptySeries: "This series is empty. Add works from Explore or My collection.",
+  tvOffWaiting: "TV is off; continues when it's on",
+  duration: (s: number) => {
+    if (s > 0 && s % 86400 === 0) return `${s / 86400} ${s === 86400 ? "day" : "days"}`
+    if (s >= 3600) {
+      const h = Math.floor(s / 3600)
+      const m = Math.round((s % 3600) / 60)
+      return m ? `${h} h ${m} min` : `${h} h`
+    }
+    return `${Math.round(s / 60)} min`
+  },
 }
 
 export type Strings = typeof en
@@ -127,6 +173,7 @@ const nl: Strings = {
   ...en,
   tabExplore: "Ontdek",
   tabCollection: "Mijn collectie",
+  tabSeries: "Series",
   tabHistory: "Geschiedenis",
   tabSettings: "Instellingen",
   nowShowing: "Nu aan de muur",
@@ -229,6 +276,51 @@ const nl: Strings = {
   nightly: "Ververst elke nacht automatisch.",
   colors: { red: "Rood", gold: "Goud", brown: "Bruin", green: "Groen", blue: "Blauw", dark: "Donker", light: "Licht" },
   errorGeneric: "Er ging iets mis",
+  series: "Series",
+  seriesHelp: "Een serie laat werken rouleren op een TV: op volgorde of geschud, elk zo lang als je kiest.",
+  newSeries: "Nieuwe serie",
+  addToSeries: "Voeg toe aan serie",
+  seriesName: "Naam van de serie",
+  create: "Maken",
+  addedTo: (name) => `Toegevoegd aan ${name}`,
+  openSeries: "Open serie",
+  noSeries: "Nog geen series. Open een werk en kies Nieuwe serie, of maak er een van zoekresultaten of een album.",
+  seriesFromResults: "Serie van deze resultaten",
+  seriesFromAlbum: "Serie van dit album",
+  worksCount: (n) => `${n} ${n === 1 ? "werk" : "werken"}`,
+  each: (d) => `${d} per werk`,
+  total: (d) => `${d} totaal`,
+  eachWork: "Per werk",
+  durationOf: (title) => `Duur van ${title}`,
+  seriesDefault: (d) => `Serie (${d})`,
+  shuffle: "Shuffle",
+  playOn: (tv) => `Afspelen op ${tv}`,
+  playingOn: (tv) => `Speelt op ${tv}`,
+  playing: "Speelt",
+  paused: "Gepauzeerd",
+  nextUp: (title) => `Hierna: ${title}`,
+  nextAt: (time) => `om ${time}`,
+  pause: "Pauze",
+  resume: "Hervat",
+  nextWork: "Volgende",
+  stop: "Stop",
+  remove: (title) => `Verwijder ${title}`,
+  moveUp: "Omhoog",
+  moveDown: "Omlaag",
+  dragHint: "Sleep om de volgorde te wijzigen",
+  deleteSeries: "Serie verwijderen",
+  deleteSeriesConfirm: "Deze serie verwijderen? Hij stopt op elke TV.",
+  emptySeries: "Deze serie is leeg. Voeg werken toe vanuit Ontdek of Mijn collectie.",
+  tvOffWaiting: "TV staat uit; gaat verder zodra hij aan is",
+  duration: (s) => {
+    if (s > 0 && s % 86400 === 0) return `${s / 86400} ${s === 86400 ? "dag" : "dagen"}`
+    if (s >= 3600) {
+      const h = Math.floor(s / 3600)
+      const m = Math.round((s % 3600) / 60)
+      return m ? `${h} u ${m} min` : `${h} u`
+    }
+    return `${Math.round(s / 60)} min`
+  },
 }
 
 const STRINGS: Record<Lang, Strings> = { en, nl }

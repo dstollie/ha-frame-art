@@ -13,6 +13,7 @@ import { useState } from "react"
 
 import { FramePreview } from "@/components/frame-preview"
 import { Alert, Button, Card, Chip, Icon, IconButton, Segmented, TextField } from "@/components/ha"
+import { SeriesActions } from "@/components/series"
 import { ShowButtons } from "@/components/tv-actions"
 import {
   randomArtwork,
@@ -158,6 +159,7 @@ export function ArtworkPage({ id, mode: wanted }: { id: string; mode: Mode | und
               />
             )}
             {a && <ShowButtons artworkId={a.id} mode={wanted} />}
+            {a && <SeriesActions artworkId={a.id} inSeries={a.series} />}
           </Card>
 
           {a && (
