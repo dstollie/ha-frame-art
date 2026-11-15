@@ -1,0 +1,20 @@
+configuration:
+  tvs:
+    name: TV's
+    description: "Per Frame: een naam (wordt de id, bv. woonkamer), het IP-adres en optioneel de media_player die hem aanzet (SamsungTV Smart)."
+  default_mode:
+    name: Standaard passe-partout
+    description: light, dark, blur of fill (fill alleen bij werken die bijna 16:9 zijn).
+  keep_uploads:
+    name: Uploads bewaren per TV
+    description: Oudere eigen uploads worden van de TV verwijderd.
+  keep_favourite_uploads:
+    name: Favorieten bewaren per TV
+  cache_mb:
+    name: Cache (MB)
+  sync_hour:
+    name: Uur van de nachtelijke catalogus-sync
+  sync_on_start:
+    name: Catalogus verversen bij elke start
+  mqtt:
+    name: HA-entiteiten via MQTT

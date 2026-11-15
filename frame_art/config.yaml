@@ -1,0 +1,46 @@
+name: Frame Art
+version: "0.1.0"
+slug: frame_art
+description: Open-access museumschilderijen op je Samsung The Frame, met één tik.
+url: https://github.com/dstollie/ha-frame-art
+arch:
+  - aarch64
+image: ghcr.io/dstollie/frame-art-{arch}
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8099
+ingress_stream: false
+panel_icon: mdi:image-frame
+panel_title: Frame Art
+homeassistant_api: true
+services:
+  - mqtt:want
+watchdog: http://[HOST]:[PORT:8099]/api/config
+options:
+  tvs:
+    - name: Woonkamer
+      host: 192.168.1.151
+      wake_entity: media_player.frame_woonkamer
+    - name: Slaapkamer
+      host: 192.168.1.152
+  default_mode: light
+  keep_uploads: 20
+  keep_favourite_uploads: 50
+  cache_mb: 1500
+  sync_hour: 4
+  sync_on_start: false
+  mqtt: true
+schema:
+  tvs:
+    - name: str
+      host: str
+      wake_entity: str?
+  default_mode: list(light|dark|blur|fill)
+  keep_uploads: int(1,200)
+  keep_favourite_uploads: int(1,200)
+  cache_mb: int(100,20000)
+  sync_hour: int(0,23)
+  sync_on_start: bool
+  mqtt: bool
