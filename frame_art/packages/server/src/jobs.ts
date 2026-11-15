@@ -25,6 +25,8 @@ export interface JobDTO {
   tv: string
   artworkId: string
   mode: Mode
+  /** Woken for this job when off; series steps after the first never wake a TV. */
+  wake: boolean
   status: "queued" | "running" | "done" | "error"
   error: string | null
   steps: { id: StepId; label: string; state: StepState }[]
@@ -39,6 +41,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export class JobRunner {
   readonly jobs = new Map<string, JobDTO>()
   private queues = new Map<string, Promise<void>>()
+  /** Works cleanup must keep on a TV (a playing series' current and next). */
+  protect: (tv: string) => Set<string> = () => new Set()
 
   constructor(
     private readonly settings: Settings,
@@ -50,13 +54,14 @@ export class JobRunner {
     private readonly opts: { wakeTimeoutMs?: number; pollMs?: number; settleMs?: number } = {},
   ) {}
 
-  submit(tv: string, artworkId: string, mode: Mode): JobDTO {
+  submit(tv: string, artworkId: string, mode: Mode, opts: { wake?: boolean } = {}): JobDTO {
     if (!this.tvs.has(tv)) throw new Error(`Onbekende TV ${tv}`)
     const job: JobDTO = {
       id: randomUUID().slice(0, 12),
       tv,
       artworkId,
       mode,
+      wake: opts.wake ?? true,
       status: "queued",
       error: null,
       steps: STEPS.map(([id, label]) => ({ id, label, state: "todo" as StepState })),
@@ -101,6 +106,7 @@ export class JobRunner {
   private async wake(job: JobDTO, tv: TV) {
     if (await tv.isOn()) return this.step(job, "wake", "skipped")
     const cfg = this.settings.tvs.find((t) => t.id === job.tv)
+    if (!job.wake) throw new Error("De TV staat uit")
     if (!cfg?.wakeEntity || !this.ha.available) throw new Error("De TV staat uit en er is geen wake_entity ingesteld")
     this.step(job, "wake", "busy")
     await this.ha.callService("media_player", "turn_on", { entity_id: cfg.wakeEntity })
@@ -122,6 +128,13 @@ export class JobRunner {
     const tv = this.tvs.get(job.tv)!
 
     const file = this.images.renderPath(art.id, job.mode)
+    const existing = this.store.findUpload(job.tv, art.id, job.mode)
+    if (existing && (await this.reuse(job, tv, existing))) {
+      const shown = existsSync(file) ? readFileSync(file) : await this.images.thumb(art).catch(() => null)
+      if (shown) await this.onShown?.(job.tv, art, shown).catch(() => undefined)
+      return
+    }
+
     let jpeg: Buffer
     if (existsSync(file)) {
       this.step(job, "download", "skipped")
@@ -142,13 +155,13 @@ export class JobRunner {
 
     this.step(job, "show", "busy")
     const contentId = await tv.show(jpeg)
-    this.store.recordUpload(job.tv, contentId, art.id)
+    this.store.recordUpload(job.tv, contentId, art.id, job.mode)
     this.store.addHistory(job.tv, art.id, job.mode)
     this.step(job, "show", "done")
 
     this.step(job, "cleanup", "busy")
     const prune = this.store
-      .prunableUploads(job.tv, this.settings.keepUploads, this.settings.keepFavouriteUploads)
+      .prunableUploads(job.tv, this.settings.keepUploads, this.settings.keepFavouriteUploads, this.protect(job.tv))
       .filter((c) => c !== contentId)
     if (prune.length) {
       try {
@@ -163,6 +176,28 @@ export class JobRunner {
     }
 
     await this.onShown?.(job.tv, art, jpeg).catch(() => undefined)
+  }
+
+  /** Select a work that's still on the TV: no download, render or upload. False when the TV lost it. */
+  private async reuse(job: JobDTO, tv: TV, contentId: string): Promise<boolean> {
+    await this.wake(job, tv)
+    this.step(job, "show", "busy")
+    let shown = false
+    try {
+      shown = await tv.showExisting(contentId)
+    } catch {
+      shown = false // can't tell; upload again
+    }
+    if (!shown) {
+      this.store.removeUploads(job.tv, [contentId])
+      this.step(job, "show", "todo")
+      return false
+    }
+    for (const id of ["download", "render", "cleanup"] as const) this.step(job, id, "skipped")
+    this.store.recordUpload(job.tv, contentId, job.artworkId, job.mode)
+    this.store.addHistory(job.tv, job.artworkId, job.mode)
+    this.step(job, "show", "done")
+    return true
   }
 
   /** Rotation: a landscape-friendly work from the category, not shown on this TV recently. */

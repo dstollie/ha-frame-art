@@ -47,6 +47,8 @@ export const uploads = sqliteTable(
     artworkId: text("artwork_id").notNull(),
     uploadedAt: real("uploaded_at").notNull(),
     seq: integer("seq").notNull().default(0),
+    /** The mode it was rendered in; null for uploads from before 0.3.0 (never re-used). */
+    mode: text("mode"),
   },
   (t) => [primaryKey({ columns: [t.tv, t.contentId] })],
 )
@@ -101,7 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_artworks_source ON artworks(source);
 CREATE TABLE IF NOT EXISTS favourites (artwork_id TEXT PRIMARY KEY, added_at REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS uploads (
   tv TEXT NOT NULL, content_id TEXT NOT NULL, artwork_id TEXT NOT NULL, uploaded_at REAL NOT NULL,
-  seq INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tv, content_id)
+  seq INTEGER NOT NULL DEFAULT 0, mode TEXT, PRIMARY KEY (tv, content_id)
 );
 CREATE TABLE IF NOT EXISTS history (
   id INTEGER PRIMARY KEY AUTOINCREMENT, tv TEXT NOT NULL, artwork_id TEXT NOT NULL, mode TEXT NOT NULL, shown_at REAL NOT NULL
@@ -188,6 +190,10 @@ export class Store {
       (this.sqlite.prepare("PRAGMA table_info(artworks)").all() as { name: string }[]).map((c) => c.name),
     )
     if (!columns.has("licence")) this.sqlite.exec("ALTER TABLE artworks ADD COLUMN licence TEXT NOT NULL DEFAULT ''")
+    const uploadColumns = new Set(
+      (this.sqlite.prepare("PRAGMA table_info(uploads)").all() as { name: string }[]).map((c) => c.name),
+    )
+    if (!uploadColumns.has("mode")) this.sqlite.exec("ALTER TABLE uploads ADD COLUMN mode TEXT")
     if (this.getMeta("categorizer_version") === CATEGORIZER_VERSION) return
     const update = this.sqlite.prepare("UPDATE artworks SET categories = ?, color_family = ? WHERE id = ?")
     this.sqlite.transaction(() => {
@@ -409,22 +415,40 @@ export class Store {
   }
 
   // ------------------------------------------------------------ uploads + history
-  recordUpload(tv: string, contentId: string, artworkId: string) {
+  /** Records an upload, or marks a re-used one as the newest so cleanup keeps it longest. */
+  recordUpload(tv: string, contentId: string, artworkId: string, mode: string | null = null) {
     this.db
       .insert(uploads)
-      .values({ tv, contentId, artworkId, uploadedAt: now(), seq: ++this.seq })
+      .values({ tv, contentId, artworkId, uploadedAt: now(), seq: ++this.seq, mode })
       .onConflictDoUpdate({
         target: [uploads.tv, uploads.contentId],
-        set: { artworkId, uploadedAt: now(), seq: this.seq },
+        set: { artworkId, seq: this.seq, mode },
       })
       .run()
   }
 
-  /** Our own uploads beyond the newest `keep` (favourites: beyond `keepFavourites`). */
-  prunableUploads(tv: string, keep: number, keepFavourites: number): string[] {
+  /** The newest upload of this work in this mode on this TV, if we still think it's there. */
+  findUpload(tv: string, artworkId: string, mode: string): string | null {
+    return (
+      this.db
+        .select({ id: uploads.contentId })
+        .from(uploads)
+        .where(and(eq(uploads.tv, tv), eq(uploads.artworkId, artworkId), eq(uploads.mode, mode)))
+        .orderBy(desc(uploads.seq))
+        .get()?.id ?? null
+    )
+  }
+
+  /**
+   * Our own uploads beyond the newest `keep` (favourites: beyond `keepFavourites`).
+   * Works in `protect` (what a playing series shows now and next) are never pruned.
+   */
+  prunableUploads(tv: string, keep: number, keepFavourites: number, protect: Set<string> = new Set()): string[] {
     const favs = this.favouriteIds()
     const rows = this.db.select().from(uploads).where(eq(uploads.tv, tv)).orderBy(desc(uploads.seq)).all()
-    return rows.filter((r, i) => i >= (favs.has(r.artworkId) ? keepFavourites : keep)).map((r) => r.contentId)
+    return rows
+      .filter((r, i) => i >= (favs.has(r.artworkId) ? keepFavourites : keep) && !protect.has(r.artworkId))
+      .map((r) => r.contentId)
   }
 
   removeUploads(tv: string, contentIds: string[]) {

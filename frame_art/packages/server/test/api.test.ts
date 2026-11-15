@@ -194,12 +194,19 @@ describe("MCP", () => {
     await boot()
     const tools = (await (await client()).listTools()).tools.map((t) => t.name).toSorted()
     expect(tools).toEqual([
+      "control_playback",
+      "create_series",
+      "delete_series",
       "get_current_art",
+      "get_series",
       "list_albums",
+      "list_series",
       "list_sources",
       "list_tvs",
+      "play_series",
       "search_art",
       "show_artwork",
+      "update_series",
       "upload_image",
     ])
   })

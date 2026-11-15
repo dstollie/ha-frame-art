@@ -255,6 +255,7 @@ ingress.get("/frame-art/*", (c) => {
 ingress.get("/frame-art", (c) => c.redirect("/frame-art/"))
 ingress.get("/", (c) => c.redirect("/frame-art/"))
 
+svc.player.load()
 serve({ fetch: ingress.fetch, port }, () => {
   console.log(`dev stack: ${base}${PREFIX}/  (data ${dataDir}, seed ${seedMode}, catalogue ${svc.store.count()})`)
 })

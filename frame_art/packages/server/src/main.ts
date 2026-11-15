@@ -27,6 +27,8 @@ void ha
   .discover("frame_art", { host: hostname(), port, token: svc.tokens.internal })
   .then((ok) => console.log(ok ? "Announced to Home Assistant (discovery)" : "Discovery not available"))
 
+svc.player.load()
+
 void svc.syncer.loop(settings.syncHour, settings.syncOnStart).catch((e) => console.error("sync loop", e))
 
 if (settings.mqtt) {
@@ -42,8 +44,11 @@ if (settings.mqtt) {
       },
       onCategory: (tv, cat) => svc.setCategory(tv, cat),
       categoryOf: svc.categoryOf,
+      onSeries: (tv, label) => svc.selectSeries(tv, label),
+      onPlayback: (tv, action) => svc.controlPlayback(tv, action),
     })
     svc.mqtt.start()
+    svc.publishSeries()
     console.log("MQTT discovery on")
   } else {
     console.warn("No MQTT service from the Supervisor; HA entities are off")
@@ -52,6 +57,7 @@ if (settings.mqtt) {
 
 const shutdown = () => {
   svc.syncer.stop()
+  svc.player.stop()
   svc.mqtt?.stop()
   svc.store.close()
   process.exit(0)

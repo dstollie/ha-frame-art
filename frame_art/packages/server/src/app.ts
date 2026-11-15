@@ -19,11 +19,13 @@ import { ImageCache } from "./images.js"
 import { JobRunner } from "./jobs.js"
 import { createMcpServer } from "./mcp.js"
 import { MODES, toDTO, type Artwork, type ArtworkDTO, type Mode } from "./models.js"
-import { ID_TO_LABEL, PREFIX, ROTATION_OPTIONS, type MqttBridge } from "./mqtt.js"
+import { ID_TO_LABEL, NO_SERIES, PREFIX, ROTATION_OPTIONS, seriesLabels, type MqttBridge } from "./mqtt.js"
+import { Player, type PlaybackAction, type PlayerOptions } from "./player.js"
 import { USER_AGENT, type Fetch } from "./providers/http.js"
 import { MINE } from "./providers/mine.js"
 import type { ArtProvider } from "./providers/types.js"
 import { H, LAYOUT, MAX_UPSCALE, W, bevelWidth, centredCrop, smartCrop, thumbnailJpeg, type Crop } from "./render.js"
+import { MAX_DURATION, MAX_FROM_QUERY, MIN_DURATION, SeriesStore, type SeriesRow } from "./series.js"
 import { Sources } from "./sources.js"
 import { Syncer } from "./sync.js"
 import type { TV } from "./tv.js"
@@ -38,6 +40,7 @@ export interface Deps {
   staticDir?: string | null
   providers?: ArtProvider[]
   jobOptions?: ConstructorParameters<typeof JobRunner>[6]
+  playerOptions?: PlayerOptions
   /** "open" skips auth (dev stack, tests); "addon" requires ingress or a token. */
   auth?: "addon" | "open"
   /** Remote address of a request; tests override it. */
@@ -77,6 +80,22 @@ const listQuery = z.object({
 })
 const on = (v: string | undefined) => v === "1" || v === "true"
 
+const durationSchema = z.number().int().min(MIN_DURATION).max(MAX_DURATION)
+const seriesCreate = z.object({
+  name: z.string().trim().min(1).max(80),
+  artworkIds: z.array(z.string()).max(500).optional(),
+  albumId: z.string().optional(),
+  query: listQuery.omit({ offset: true, limit: true }).optional(),
+  duration: durationSchema.optional(),
+  shuffle: z.boolean().optional(),
+})
+const seriesPatch = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  duration: durationSchema.optional(),
+  shuffle: z.boolean().optional(),
+})
+const PLAYBACK_ACTIONS = ["pause", "resume", "toggle", "next", "stop"] as const satisfies readonly PlaybackAction[]
+
 export function createServices(deps: Deps) {
   const { settings, tvs, ha } = deps
   const p = paths(settings)
@@ -92,6 +111,7 @@ export function createServices(deps: Deps) {
   const syncer = deps.syncer ?? new Syncer(store, sources, fetchFn, { thumb: (a) => images.thumb(a) })
   const collection = new Collection(store, images, fetchFn)
   const tokens = new Tokens(store)
+  const seriesStore = new SeriesStore(store)
 
   const toQuery = (p: z.infer<typeof listQuery>): Query => ({
     category: p.category || null,
@@ -118,6 +138,8 @@ export function createServices(deps: Deps) {
     tvs,
     ha,
     toQuery,
+    series: seriesStore,
+    player: null as unknown as Player,
     mqtt: null as MqttBridge | null,
     runner: null as unknown as JobRunner,
     crops: new Map<string, Crop>(),
@@ -188,6 +210,7 @@ export function createServices(deps: Deps) {
               current:
                 art && last ? { artwork: svc.artDTO(art, favs), shownAt: last.shownAt, mode: last.mode as Mode } : null,
               job: job && (job.status === "queued" || job.status === "running") ? job : null,
+              playback: svc.playbackOf(cfg.id, favs),
             }
           }),
       )
@@ -196,11 +219,67 @@ export function createServices(deps: Deps) {
     async onShown(tv: string, art: Artwork, jpeg: Buffer) {
       if (svc.mqtt) svc.mqtt.publishCurrent(tv, art, await thumbnailJpeg(jpeg))
     },
+    /** A manual show or "new work" holds a playing series on that TV. */
+    show(tv: string, artworkId: string, mode?: Mode) {
+      svc.player.hold(tv)
+      return svc.runner.submit(tv, artworkId, svc.modeFor(tv, mode))
+    },
     next(tv: string) {
+      svc.player.hold(tv)
       const category = svc.categoryOf(tv)
       const art = svc.runner.pickNext(tv, category, category === "collection" ? [MINE] : sources.enabledIds())
       if (!art) throw new HTTPException(404, { message: "Geen werk gevonden in deze categorie" })
       return svc.runner.submit(tv, art.id, svc.modeFor(tv))
+    },
+    playbackOf(tv: string, favs = store.favouriteIds()) {
+      const st = svc.player.state(tv)
+      if (!st) return null
+      const dto = (id: string | null) => {
+        const a = id ? store.get(id) : null
+        return a ? svc.artDTO(a, favs) : null
+      }
+      const { currentId, nextId, ...rest } = st
+      return { ...rest, current: dto(currentId), next: dto(nextId) }
+    },
+
+    seriesSummary(row: SeriesRow, favs = store.favouriteIds()) {
+      const items = seriesStore.items(row.id)
+      const cover = items[0]?.artwork
+      return {
+        id: row.id,
+        name: row.name,
+        duration: row.duration,
+        shuffle: row.shuffle,
+        count: items.length,
+        totalDuration: items.reduce((sum, i) => sum + (i.duration ?? row.duration), 0),
+        cover: cover ? svc.artDTO(cover, favs) : null,
+        playingOn: svc.player.playingOn(row.id),
+      }
+    },
+    seriesDetail(row: SeriesRow) {
+      const favs = store.favouriteIds()
+      return {
+        ...svc.seriesSummary(row, favs),
+        items: seriesStore.items(row.id).map((i) => ({ artwork: svc.artDTO(i.artwork, favs), duration: i.duration })),
+      }
+    },
+    /** Series list and per-TV state to HA (MQTT); options change when series do. */
+    publishSeries() {
+      if (!svc.mqtt) return
+      const list = seriesStore.list().map((r) => svc.seriesSummary(r))
+      svc.mqtt.publishSeries(
+        list,
+        settings.tvs.map((t) => ({ tv: t.id, playback: svc.playbackOf(t.id) })),
+      )
+    },
+    async selectSeries(tv: string, label: string) {
+      if (label === NO_SERIES) return void svc.player.control(tv, "stop")
+      const labels = seriesLabels(seriesStore.list())
+      const id = [...labels].find(([, l]) => l === label)?.[0] ?? seriesStore.get(label)?.id
+      if (id) svc.player.play(id, [tv])
+    },
+    async controlPlayback(tv: string, action: PlaybackAction) {
+      return svc.player.control(tv, action)
     },
     async setCategory(tv: string, category: string) {
       if (!rotationIds.includes(category)) return
@@ -217,6 +296,18 @@ export function createServices(deps: Deps) {
     (tv, art, jpeg) => svc.onShown(tv, art, jpeg),
     deps.jobOptions,
   )
+  svc.player = new Player(
+    {
+      store,
+      series: seriesStore,
+      runner: svc.runner,
+      tvs,
+      modeFor: (tv) => svc.modeFor(tv),
+      onChange: () => svc.publishSeries(),
+    },
+    deps.playerOptions,
+  )
+  svc.runner.protect = (tv) => svc.player.protect(tv)
   return svc
 }
 export type Services = ReturnType<typeof createServices>
@@ -238,7 +329,7 @@ const collectionCall = async <T>(fn: () => Promise<T> | T): Promise<T> => {
   }
 }
 export function createApi(svc: Services) {
-  const { store, settings, tvs, runner, syncer, images, sources, collection, tokens } = svc
+  const { store, settings, tvs, runner, syncer, images, sources, collection, tokens, series } = svc
 
   const artOr404 = (id: string) => {
     const a = store.get(id)
@@ -249,6 +340,11 @@ export function createApi(svc: Services) {
     const t = tvs.get(id)
     if (!t) throw new HTTPException(404, { message: `Onbekende TV ${id}` })
     return t
+  }
+  const seriesOr404 = (id: string) => {
+    const s = series.get(id)
+    if (!s) throw new HTTPException(404, { message: "Onbekende serie" })
+    return s
   }
   const albumOr404 = (id: string) => {
     const a = store.album(id)
@@ -297,6 +393,7 @@ export function createApi(svc: Services) {
         return c.json({
           ...svc.artDTO(a),
           albums: store.albumsOf(a.id),
+          series: series.containing(a.id),
           shown: shown.map((h) => ({ tv: h.tv, shownAt: h.shownAt, mode: h.mode })),
         })
       })
@@ -390,7 +487,7 @@ export function createApi(svc: Services) {
           const { artworkId, mode } = c.req.valid("json")
           const art = artOr404(artworkId)
           if (!tv.paired) throw new HTTPException(409, { message: "Deze TV is nog niet gekoppeld" })
-          return c.json(runner.submit(tv.id, art.id, svc.modeFor(tv.id, mode)))
+          return c.json(svc.show(tv.id, art.id, mode))
         },
       )
       .post("/tvs/:tv/next", (c) => {
@@ -421,6 +518,106 @@ export function createApi(svc: Services) {
           console.warn(`pair ${tv.id}: ${message}`)
           throw new HTTPException(502, { message })
         }
+      })
+      .post("/tvs/:tv/playback", validate("json", z.object({ action: z.enum(PLAYBACK_ACTIONS) })), async (c) => {
+        const tv = tvOr404(c.req.param("tv"))
+        if (!(await svc.player.control(tv.id, c.req.valid("json").action))) {
+          throw new HTTPException(404, { message: "Er speelt geen serie op deze TV" })
+        }
+        return c.json({ playback: svc.playbackOf(tv.id) })
+      })
+      // ---------------------------------------------------------------- series
+      .get("/series", (c) => {
+        const favs = store.favouriteIds()
+        return c.json(series.list().map((r) => svc.seriesSummary(r, favs)))
+      })
+      .post("/series", validate("json", seriesCreate), (c) => {
+        const body = c.req.valid("json")
+        let ids = body.artworkIds ?? []
+        for (const id of ids) artOr404(id)
+        if (body.albumId)
+          ids = [
+            ...ids,
+            ...store.query({ album: albumOr404(body.albumId).id, limit: MAX_FROM_QUERY }).items.map((a) => a.id),
+          ]
+        if (body.query)
+          ids = [
+            ...ids,
+            ...store.query({ ...svc.toQuery(body.query), offset: 0, limit: MAX_FROM_QUERY }).items.map((a) => a.id),
+          ]
+        const row = series.create(body.name, {
+          ...(body.duration ? { duration: body.duration } : {}),
+          ...(body.shuffle !== undefined ? { shuffle: body.shuffle } : {}),
+          artworkIds: [...new Set(ids)],
+        })
+        svc.publishSeries()
+        return c.json(svc.seriesDetail(row))
+      })
+      .get("/series/:id", (c) => c.json(svc.seriesDetail(seriesOr404(c.req.param("id")))))
+      .patch("/series/:id", validate("json", seriesPatch), (c) => {
+        const row = seriesOr404(c.req.param("id"))
+        const { name, duration, shuffle } = c.req.valid("json")
+        series.update(row.id, {
+          ...(name !== undefined ? { name } : {}),
+          ...(duration !== undefined ? { duration } : {}),
+          ...(shuffle !== undefined ? { shuffle } : {}),
+        })
+        svc.publishSeries()
+        return c.json(svc.seriesDetail(series.get(row.id)!))
+      })
+      .delete("/series/:id", (c) => {
+        const row = seriesOr404(c.req.param("id"))
+        svc.player.stopSeries(row.id)
+        series.delete(row.id)
+        svc.mqtt?.removeSeries(row.id)
+        svc.publishSeries()
+        return c.json({ deleted: true as const })
+      })
+      .post(
+        "/series/:id/items",
+        validate("json", z.object({ artworkId: z.string(), duration: durationSchema.nullable().optional() })),
+        (c) => {
+          const row = seriesOr404(c.req.param("id"))
+          const { artworkId, duration } = c.req.valid("json")
+          artOr404(artworkId)
+          series.add(row.id, artworkId, duration ?? null)
+          svc.publishSeries()
+          return c.json(svc.seriesDetail(row))
+        },
+      )
+      .patch(
+        "/series/:id/items/:artworkId",
+        validate("json", z.object({ duration: durationSchema.nullable() })),
+        (c) => {
+          const row = seriesOr404(c.req.param("id"))
+          if (!series.setItemDuration(row.id, c.req.param("artworkId"), c.req.valid("json").duration)) {
+            throw new HTTPException(404, { message: "Dit werk zit niet in de serie" })
+          }
+          svc.publishSeries()
+          return c.json(svc.seriesDetail(row))
+        },
+      )
+      .delete("/series/:id/items/:artworkId", (c) => {
+        const row = seriesOr404(c.req.param("id"))
+        series.remove(row.id, c.req.param("artworkId"))
+        svc.publishSeries()
+        return c.json(svc.seriesDetail(row))
+      })
+      .put("/series/:id/order", validate("json", z.object({ artworkIds: z.array(z.string()) })), (c) => {
+        const row = seriesOr404(c.req.param("id"))
+        series.reorder(row.id, c.req.valid("json").artworkIds)
+        svc.publishSeries()
+        return c.json(svc.seriesDetail(row))
+      })
+      .post("/series/:id/play", validate("json", z.object({ tvs: z.array(z.string()).min(1) })), (c) => {
+        const row = seriesOr404(c.req.param("id"))
+        const ids = c.req.valid("json").tvs
+        for (const id of ids) {
+          if (!tvOr404(id).paired) throw new HTTPException(409, { message: "Deze TV is nog niet gekoppeld" })
+        }
+        if (!series.itemIds(row.id).length) throw new HTTPException(400, { message: "Deze serie is leeg" })
+        svc.player.play(row.id, ids)
+        return c.json(ids.map((tv) => ({ tv, playback: svc.playbackOf(tv) })))
       })
       .get("/jobs/:id", (c) => {
         const job = runner.jobs.get(c.req.param("id"))

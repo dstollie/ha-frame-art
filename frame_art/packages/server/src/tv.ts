@@ -18,6 +18,8 @@ export interface TV {
   isOn(): Promise<boolean>
   pair(): Promise<{ apiVersion: string }>
   show(jpeg: Buffer): Promise<string>
+  /** Select a work that is already on the TV; false when the TV no longer has it. */
+  showExisting(contentId: string): Promise<boolean>
   remove(contentIds: string[]): Promise<void>
 }
 
@@ -103,6 +105,17 @@ export class FrameTV implements TV {
         await c.selectImage(id, true)
         await c.setArtMode(true)
         return id
+      }),
+    )
+  }
+
+  showExisting(contentId: string) {
+    return this.serial(() =>
+      this.withClient(async (c) => {
+        if (!(await c.contentIds()).includes(contentId)) return false
+        await c.selectImage(contentId, true)
+        await c.setArtMode(true)
+        return true
       }),
     )
   }
