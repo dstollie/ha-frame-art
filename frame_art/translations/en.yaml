@@ -1,20 +1,20 @@
 configuration:
   tvs:
-    name: TV's
-    description: "Per Frame: een naam (wordt de id, bv. woonkamer), het IP-adres en optioneel de media_player die hem aanzet (SamsungTV Smart)."
+    name: TVs
+    description: "Per Frame: a name (also its id, e.g. woonkamer), its IP address, and optionally the media_player that switches it on (SamsungTV Smart)."
   default_mode:
-    name: Standaard passe-partout
-    description: light, dark, blur of fill (fill alleen bij werken die bijna 16:9 zijn).
+    name: Passe-partout style
+    description: light, dark or blur, used when a TV is set to passe-partout. Fill or passe-partout per TV is set in the panel.
   keep_uploads:
-    name: Uploads bewaren per TV
-    description: Oudere eigen uploads worden van de TV verwijderd.
+    name: Uploads kept per TV
+    description: Older uploads made by Frame Art are deleted from the TV.
   keep_favourite_uploads:
-    name: Favorieten bewaren per TV
+    name: Favourites kept per TV
   cache_mb:
     name: Cache (MB)
   sync_hour:
-    name: Uur van de nachtelijke catalogus-sync
+    name: Hour of the nightly catalogue refresh
   sync_on_start:
-    name: Catalogus verversen bij elke start
+    name: Refresh the catalogue at every start
   mqtt:
-    name: HA-entiteiten via MQTT
+    name: HA entities through MQTT
