@@ -1,5 +1,6 @@
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./index.js"
+import { getJson, sleep, type Fetch } from "./http.js"
+import type { ArtProvider } from "./types.js"
 
 const BASE = "https://collectionapi.metmuseum.org/public/collection"
 
@@ -44,6 +45,7 @@ export function parseObject(obj: MetObject): Artwork | null {
   return newArtwork({
     id: `met:${obj.objectID}`,
     source: "met",
+    licence: "CC0",
     sourceId: String(obj.objectID),
     title: (obj.title || "Zonder titel").trim(),
     artist: (obj.artistDisplayName || obj.culture || "").trim(),
@@ -104,4 +106,16 @@ export async function* harvest(
       await sleep(opts.delayMs ?? 120)
     }
   }
+}
+
+export const provider: ArtProvider = {
+  id: "met",
+  name: "The Metropolitan Museum of Art",
+  description: "European and American paintings and Japanese prints from The Met in New York.",
+  homepage: "https://www.metmuseum.org/art/collection",
+  licence: "CC0",
+  defaultEnabled: true,
+  thumbnails: "direct",
+  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  downloadUrl: (art) => art.imageUrl,
 }

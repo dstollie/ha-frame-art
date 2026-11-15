@@ -1,17 +1,9 @@
 /** Catalogue sync (nightly + on demand) and slow colour enrichment from thumbnails. */
 import type { Store } from "./db.js"
 import type { Artwork } from "./models.js"
+import { USER_AGENT, sleep, type Fetch } from "./providers/http.js"
 import { dominantColor } from "./render.js"
-import * as cleveland from "./sources/cleveland.js"
-import { USER_AGENT, sleep, type Fetch, type Harvester } from "./sources/index.js"
-import * as met from "./sources/met.js"
-import * as rijks from "./sources/rijks.js"
-
-export const HARVESTERS: Record<string, Harvester> = {
-  cleveland: cleveland.harvest,
-  met: met.harvest,
-  rijks: rijks.harvest,
-}
+import type { Sources } from "./sources.js"
 
 export interface SyncStatus {
   state: "idle" | "running"
@@ -26,9 +18,14 @@ export class Syncer {
 
   constructor(
     private readonly store: Store,
+    private readonly sources: Sources,
     private readonly fetchFn: Fetch = fetch,
-    private readonly harvesters: Record<string, Harvester> = HARVESTERS,
-    private readonly opts: { colorDelayMs?: number; harvestDelayMs?: number } = {},
+    private readonly opts: {
+      colorDelayMs?: number
+      harvestDelayMs?: number
+      /** Thumbnail bytes for colour analysis; defaults to fetching `thumbUrl`. */
+      thumb?: (art: Artwork) => Promise<Buffer>
+    } = {},
   ) {}
 
   get running() {
@@ -54,17 +51,19 @@ export class Syncer {
     if (this.running) return
     this.status = { state: "running", source: null, added: 0, error: null }
     try {
-      for (const [name, harvest] of Object.entries(this.harvesters)) {
+      for (const { provider, apiKey } of this.sources.list().filter((s) => s.enabled && s.provider.harvest)) {
         if (this.stopped) return
+        const name = provider.id
         this.status.source = name
         let batch: Artwork[] = []
         try {
           const delay = this.opts.harvestDelayMs
-          for await (const art of harvest(
-            this.fetchFn,
-            this.store.knownIds(name),
-            delay != null ? { delayMs: delay } : {},
-          )) {
+          for await (const art of provider.harvest!({
+            fetch: this.fetchFn,
+            known: this.store.knownIds(name),
+            apiKey,
+            ...(delay != null ? { delayMs: delay } : {}),
+          })) {
             batch.push(art)
             if (batch.length >= 50) {
               this.status.added += this.store.upsertArtworks(batch)
@@ -85,21 +84,26 @@ export class Syncer {
     }
   }
 
+  private async thumb(art: Artwork): Promise<Buffer> {
+    if (this.opts.thumb) return this.opts.thumb(art)
+    const r = await this.fetchFn(art.thumbUrl, {
+      headers: { "User-Agent": USER_AGENT, ...this.sources.get(art.source)?.imageHeaders },
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (!r.ok) throw new Error(String(r.status))
+    return Buffer.from(await r.arrayBuffer())
+  }
+
   /** Dominant colour + (if missing) aspect from the thumbnail. Returns how many were done. */
   async enrichColors(batch = 20): Promise<number> {
     let done = 0
     for (const art of this.store.needingColor(batch)) {
       try {
-        const r = await this.fetchFn(art.thumbUrl, {
-          headers: { "User-Agent": USER_AGENT },
-          signal: AbortSignal.timeout(30_000),
-        })
-        if (!r.ok) throw new Error(String(r.status))
-        const c = await dominantColor(Buffer.from(await r.arrayBuffer()))
+        const c = await dominantColor(await this.thumb(art))
         this.store.setColor(art.id, c.hex, c.family, c.aspect)
         done++
       } catch {
-        this.store.setColor(art.id, "#808080", "onbekend")
+        this.store.setColor(art.id, "#808080", "unknown")
       }
       await sleep(this.opts.colorDelayMs ?? 1000)
     }

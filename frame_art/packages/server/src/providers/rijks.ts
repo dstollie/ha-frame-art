@@ -1,6 +1,7 @@
 /** Rijksmuseum Linked Art Search (no API key) + IIIF on iiif.micr.io. */
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./index.js"
+import { getJson, sleep, type Fetch } from "./http.js"
+import type { ArtProvider } from "./types.js"
 
 const SEARCH = "https://data.rijksmuseum.nl/search/collection"
 const AAT_DUTCH = "http://vocab.getty.edu/aat/300388256"
@@ -103,6 +104,7 @@ export function parseObject(raw: unknown): Artwork | null {
   return newArtwork({
     id: `rijks:${text(obj.id).split("/").pop()}`,
     source: "rijks",
+    licence: "Public domain",
     sourceId: number || text(obj.id),
     title: title(obj),
     artist: artist(obj),
@@ -140,4 +142,16 @@ export async function* harvest(
       await sleep(opts.delayMs ?? 250)
     }
   }
+}
+
+export const provider: ArtProvider = {
+  id: "rijks",
+  name: "Rijksmuseum",
+  description: "Paintings from the Rijksmuseum in Amsterdam, from the Middle Ages to the 20th century.",
+  homepage: "https://www.rijksmuseum.nl/en/collection",
+  licence: "Public domain",
+  defaultEnabled: true,
+  thumbnails: "direct",
+  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  downloadUrl: (art) => art.imageUrl.replace("/full/max/", "/full/!4096,4096/"),
 }

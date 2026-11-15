@@ -1,0 +1,530 @@
+{
+  "status": 200,
+  "responseCode": 1,
+  "response": {
+    "rows": [
+      {
+        "id": "ld1-1643381040022-1643381056536-0",
+        "title": "Painted Trillium (Trillium undulatum)",
+        "unitCode": "SAAM",
+        "type": "edanmdm",
+        "url": "edanmdm:saam_1970.355.472",
+        "content": {
+          "freetext": {
+            "date": [
+              {
+                "label": "Date",
+                "content": "1924"
+              }
+            ],
+            "name": [
+              {
+                "label": "Artist",
+                "content": "Mary Vaux Walcott, born Philadelphia, PA 1860-died St. Andrews, New Brunswick, Canada 1940"
+              }
+            ],
+            "topic": [
+              {
+                "label": "Topic",
+                "content": "Study\\botanical study\\Painted trillium"
+              },
+              {
+                "label": "Topic",
+                "content": "Study\\botanical study\\Trillium undulatum"
+              }
+            ],
+            "setName": [
+              {
+                "label": "See more items in",
+                "content": "Smithsonian American Art Museum Collection"
+              },
+              {
+                "label": "Department",
+                "content": "Graphic Arts"
+              }
+            ],
+            "creditLine": [
+              {
+                "label": "Credit Line",
+                "content": "Smithsonian American Art Museum, Gift of the artist"
+              }
+            ],
+            "dataSource": [
+              {
+                "label": "Data Source",
+                "content": "Smithsonian American Art Museum"
+              }
+            ],
+            "identifier": [
+              {
+                "label": "Object number",
+                "content": "1970.355.472"
+              }
+            ],
+            "objectType": [
+              {
+                "label": "Type",
+                "content": "Painting"
+              }
+            ],
+            "objectRights": [
+              {
+                "label": "Restrictions & Rights",
+                "content": "CC0"
+              }
+            ],
+            "physicalDescription": [
+              {
+                "label": "Medium",
+                "content": "watercolor on paper"
+              },
+              {
+                "label": "Dimensions",
+                "content": "sheet: 10 1/8 x 7 in. (25.6 x 17.9 cm)"
+              }
+            ]
+          },
+          "indexedStructured": {
+            "date": [
+              "1920s"
+            ],
+            "name": [
+              "Walcott, Mary Vaux"
+            ],
+            "topic": [
+              "Trillium undulatum",
+              "Botanical study",
+              "Painted trillium"
+            ],
+            "usage_flag": [
+              "permcoll"
+            ],
+            "object_type": [
+              "Paintings"
+            ],
+            "online_media_type": [
+              "Images"
+            ]
+          },
+          "descriptiveNonRepeating": {
+            "guid": "http://n2t.net/ark:/65665/vk781b15aa4-3111-48a6-ba0e-59b3b934809c",
+            "title": {
+              "label": "Title",
+              "content": "Painted Trillium (Trillium undulatum)"
+            },
+            "record_ID": "saam_1970.355.472",
+            "unit_code": "SAAM",
+            "title_sort": "PAINTED TRILLIUM (TRILLIUM UNDULATUM)",
+            "data_source": "Smithsonian American Art Museum",
+            "record_link": "https://americanart.si.edu/collections/search/artwork/?id=26173",
+            "online_media": {
+              "media": [
+                {
+                  "id": "media:SAAM-1970.355.472_2",
+                  "guid": "http://n2t.net/ark:/65665/bj9dd2a9791-2220-4a21-b7f8-01a53c1ecbab",
+                  "type": "Images",
+                  "idsId": "SAAM-1970.355.472_2",
+                  "usage": {
+                    "access": "CC0"
+                  },
+                  "width": 2948,
+                  "height": 4160,
+                  "content": "https://ids.si.edu/ids/deliveryService?id=SAAM-1970.355.472_2",
+                  "maxsize": 3000,
+                  "thumbnail": "https://ids.si.edu/ids/deliveryService?id=SAAM-1970.355.472_2",
+                  "altTextAccessibility": "",
+                  "extDescrAccessibility": "",
+                  "resources": [
+                    {
+                      "label": "High-resolution TIFF",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1970.355.472_2.tif",
+                      "width": 2126,
+                      "height": 3000,
+                      "dimensions": "2126x3000"
+                    },
+                    {
+                      "label": "High-resolution JPEG",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1970.355.472_2.jpg",
+                      "width": 2126,
+                      "height": 3000,
+                      "dimensions": "2126x3000"
+                    },
+                    {
+                      "label": "Screen Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1970.355.472_2_screen"
+                    },
+                    {
+                      "label": "Thumbnail Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1970.355.472_2_thumb"
+                    }
+                  ]
+                }
+              ],
+              "mediaCount": 1
+            },
+            "metadata_usage": {
+              "access": "CC0"
+            }
+          }
+        },
+        "hash": "29a40475c96af897b5197baf2b829f9e865a7360",
+        "docSignature": "a84277daf2422b2e16e79e50542a0802",
+        "timestamp": "1663786513",
+        "lastTimeUpdated": "1793220300",
+        "version": "1793185836"
+      },
+      {
+        "id": "ld1-1643381040022-1643381063902-0",
+        "title": "Portrait of a Lady",
+        "unitCode": "SAAM",
+        "type": "edanmdm",
+        "url": "edanmdm:saam_1999.27.54",
+        "content": {
+          "freetext": {
+            "date": [
+              {
+                "label": "Date",
+                "content": "ca. 1760"
+              }
+            ],
+            "name": [
+              {
+                "label": "Artist",
+                "content": "Unidentified"
+              },
+              {
+                "label": "Sitter",
+                "content": "unidentified"
+              }
+            ],
+            "notes": [
+              {
+                "label": "Luce Center Label",
+                "content": "In the 1760s, American artists learned from examples of English and Continental paintings. The distorted features and sketchy details of this portrait suggest it was painted by a novice. The woman’s crystal-clear blue eyes, however, are painted with more detail and meet the viewer’s gaze directly."
+              }
+            ],
+            "topic": [
+              {
+                "label": "Topic",
+                "content": "Portrait female\\bust"
+              }
+            ],
+            "setName": [
+              {
+                "label": "See more items in",
+                "content": "Smithsonian American Art Museum Collection"
+              },
+              {
+                "label": "Department",
+                "content": "Painting and Sculpture"
+              }
+            ],
+            "creditLine": [
+              {
+                "label": "Credit Line",
+                "content": "Smithsonian American Art Museum, Bequest of Mary Elizabeth Spencer"
+              }
+            ],
+            "dataSource": [
+              {
+                "label": "Data Source",
+                "content": "Smithsonian American Art Museum"
+              }
+            ],
+            "identifier": [
+              {
+                "label": "Object number",
+                "content": "1999.27.54"
+              }
+            ],
+            "objectType": [
+              {
+                "label": "Type",
+                "content": "Painting-Miniature"
+              }
+            ],
+            "objectRights": [
+              {
+                "label": "Restrictions & Rights",
+                "content": "CC0"
+              }
+            ],
+            "physicalDescription": [
+              {
+                "label": "Medium",
+                "content": "watercolor on ivory"
+              },
+              {
+                "label": "Dimensions",
+                "content": "sight 1 1/8 x 1 in. (3.0 x 2.4 cm) oval"
+              }
+            ]
+          },
+          "indexedStructured": {
+            "date": [
+              "1760s"
+            ],
+            "topic": [
+              "Women",
+              "Portraits"
+            ],
+            "usage_flag": [
+              "permcoll"
+            ],
+            "object_type": [
+              "Paintings"
+            ],
+            "online_media_type": [
+              "Images"
+            ]
+          },
+          "descriptiveNonRepeating": {
+            "guid": "http://n2t.net/ark:/65665/vk76c6f1f48-31de-408b-bb5c-09d72fe5fb37",
+            "title": {
+              "label": "Title",
+              "content": "Portrait of a Lady"
+            },
+            "record_ID": "saam_1999.27.54",
+            "unit_code": "SAAM",
+            "title_sort": "PORTRAIT OF A LADY",
+            "data_source": "Smithsonian American Art Museum",
+            "record_link": "https://americanart.si.edu/collections/search/artwork/?id=38385",
+            "online_media": {
+              "media": [
+                {
+                  "id": "media:SAAM-1999.27.54_1",
+                  "guid": "http://n2t.net/ark:/65665/bj90f320011-bb6a-4358-b436-d133b15adcf2",
+                  "type": "Images",
+                  "idsId": "SAAM-1999.27.54_1",
+                  "usage": {
+                    "access": "CC0"
+                  },
+                  "width": 1970,
+                  "height": 2240,
+                  "content": "https://ids.si.edu/ids/deliveryService?id=SAAM-1999.27.54_1",
+                  "maxsize": 3000,
+                  "thumbnail": "https://ids.si.edu/ids/deliveryService?id=SAAM-1999.27.54_1",
+                  "altTextAccessibility": "",
+                  "extDescrAccessibility": "",
+                  "resources": [
+                    {
+                      "label": "High-resolution TIFF",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1999.27.54_1.tif",
+                      "width": 2216,
+                      "height": 2520,
+                      "dimensions": "2216x2520"
+                    },
+                    {
+                      "label": "High-resolution JPEG",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1999.27.54_1.jpg",
+                      "width": 2216,
+                      "height": 2520,
+                      "dimensions": "2216x2520"
+                    },
+                    {
+                      "label": "Screen Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1999.27.54_1_screen"
+                    },
+                    {
+                      "label": "Thumbnail Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1999.27.54_1_thumb"
+                    }
+                  ]
+                }
+              ],
+              "mediaCount": 1
+            },
+            "metadata_usage": {
+              "access": "CC0"
+            }
+          }
+        },
+        "hash": "83ee9ae9c004ba36fdea16213e543c3c634e59c6",
+        "docSignature": "dbbd8df0c2c9df58f4050407efc4a817",
+        "timestamp": "1663786514",
+        "lastTimeUpdated": "1793220300",
+        "version": "1793185836"
+      },
+      {
+        "id": "ld1-1643381040022-1643381042669-0",
+        "title": "Haddock",
+        "unitCode": "SAAM",
+        "type": "edanmdm",
+        "url": "edanmdm:saam_1983.31.20",
+        "content": {
+          "freetext": {
+            "date": [
+              {
+                "label": "Date",
+                "content": "1886"
+              }
+            ],
+            "name": [
+              {
+                "label": "Artist",
+                "content": "Emil Carlsen, born Copenhagen, Denmark 1853-died New York City 1932"
+              }
+            ],
+            "notes": [
+              {
+                "label": "Luce Center Label",
+                "content": "These slippery haddock are fresh from the sea and ready for cooking. Emil Carlsen's painting is one in a series of still lifes showing game, fish, and household utensils. The artist was inspired by the eighteenth-century French painter Jean Simeon Chardin, whose paintings he saw during a six-month stay in Paris in the late 1870s. Carlsen exhibited his still-life scenes in Boston, where they earned him critical and commercial success. This painting was a gift to his friend the artist Kenyon Cox, whose works appear elsewhere in this collection (Hiesinger, Quiet Magic: The Still-Life Paintings of Emil Carlsen, 1999)."
+              }
+            ],
+            "topic": [
+              {
+                "label": "Topic",
+                "content": "Still life\\game\\fish"
+              },
+              {
+                "label": "Topic",
+                "content": "Still life\\other\\dish"
+              }
+            ],
+            "setName": [
+              {
+                "label": "See more items in",
+                "content": "Smithsonian American Art Museum Collection"
+              },
+              {
+                "label": "Department",
+                "content": "Painting and Sculpture"
+              }
+            ],
+            "creditLine": [
+              {
+                "label": "Credit Line",
+                "content": "Smithsonian American Art Museum, Bequest of Allyn Cox"
+              }
+            ],
+            "dataSource": [
+              {
+                "label": "Data Source",
+                "content": "Smithsonian American Art Museum"
+              }
+            ],
+            "identifier": [
+              {
+                "label": "Object number",
+                "content": "1983.31.20"
+              }
+            ],
+            "objectType": [
+              {
+                "label": "Type",
+                "content": "Painting"
+              }
+            ],
+            "objectRights": [
+              {
+                "label": "Restrictions & Rights",
+                "content": "CC0"
+              }
+            ],
+            "physicalDescription": [
+              {
+                "label": "Medium",
+                "content": "oil on canvas"
+              },
+              {
+                "label": "Dimensions",
+                "content": "12 x 29 7/8 in. (30.5 x 75.9 cm.)"
+              }
+            ]
+          },
+          "indexedStructured": {
+            "date": [
+              "1880s"
+            ],
+            "name": [
+              "Carlsen, Emil"
+            ],
+            "topic": [
+              "Fishes",
+              "Games",
+              "Dish"
+            ],
+            "usage_flag": [
+              "permcoll"
+            ],
+            "object_type": [
+              "Paintings",
+              "Still lifes"
+            ],
+            "online_media_type": [
+              "Images"
+            ]
+          },
+          "descriptiveNonRepeating": {
+            "guid": "http://n2t.net/ark:/65665/vk7331c85d6-ebd5-43d6-9201-cd807892bc3d",
+            "title": {
+              "label": "Title",
+              "content": "Haddock"
+            },
+            "record_ID": "saam_1983.31.20",
+            "unit_code": "SAAM",
+            "title_sort": "HADDOCK",
+            "data_source": "Smithsonian American Art Museum",
+            "record_link": "https://americanart.si.edu/collections/search/artwork/?id=3769",
+            "online_media": {
+              "media": [
+                {
+                  "id": "media:SAAM-1983.31.20_1",
+                  "guid": "http://n2t.net/ark:/65665/bj95e07af4d-6fd2-4ed3-88a2-48b3ee8ae1d3",
+                  "type": "Images",
+                  "idsId": "SAAM-1983.31.20_1",
+                  "usage": {
+                    "access": "CC0"
+                  },
+                  "width": 6720,
+                  "height": 2648,
+                  "content": "https://ids.si.edu/ids/deliveryService?id=SAAM-1983.31.20_1",
+                  "maxsize": 3000,
+                  "thumbnail": "https://ids.si.edu/ids/deliveryService?id=SAAM-1983.31.20_1",
+                  "altTextAccessibility": "",
+                  "extDescrAccessibility": "",
+                  "resources": [
+                    {
+                      "label": "High-resolution TIFF",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1983.31.20_1.tif",
+                      "width": 3000,
+                      "height": 1182,
+                      "dimensions": "3000x1182"
+                    },
+                    {
+                      "label": "High-resolution JPEG",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1983.31.20_1.jpg",
+                      "width": 3000,
+                      "height": 1182,
+                      "dimensions": "3000x1182"
+                    },
+                    {
+                      "label": "Screen Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1983.31.20_1_screen"
+                    },
+                    {
+                      "label": "Thumbnail Image",
+                      "url": "https://ids.si.edu/ids/download?id=SAAM-1983.31.20_1_thumb"
+                    }
+                  ]
+                }
+              ],
+              "mediaCount": 1
+            },
+            "metadata_usage": {
+              "access": "CC0"
+            }
+          }
+        },
+        "hash": "92db30c451996900e7fd7f387d17cf4643d026f9",
+        "docSignature": "f7c5cabc9d80b82ea26abe6f9ccf7b3f",
+        "timestamp": "1663786514",
+        "lastTimeUpdated": "1793270193",
+        "version": "1793265717"
+      }
+    ],
+    "facets": {},
+    "rowCount": 5226,
+    "message": "content found"
+  }
+}

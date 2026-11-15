@@ -1,5 +1,6 @@
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./index.js"
+import { getJson, sleep, type Fetch } from "./http.js"
+import type { ArtProvider } from "./types.js"
 
 const BASE = "https://openaccess-api.clevelandart.org/api/artworks/"
 const PAGE = 500
@@ -43,6 +44,7 @@ export function parseItem(item: CmaItem): Artwork | null {
   return newArtwork({
     id: `cleveland:${item.id}`,
     source: "cleveland",
+    licence: "CC0",
     sourceId: String(item.id),
     title: (item.title || "Zonder titel").trim(),
     artist: name,
@@ -82,4 +84,16 @@ export async function* harvest(
     if (data.length < PAGE) return
     await sleep(opts.delayMs ?? 500)
   }
+}
+
+export const provider: ArtProvider = {
+  id: "cleveland",
+  name: "Cleveland Museum of Art",
+  description: "Paintings from every period and culture in the Cleveland Museum of Art's open-access collection.",
+  homepage: "https://www.clevelandart.org/open-access",
+  licence: "CC0",
+  defaultEnabled: true,
+  thumbnails: "direct",
+  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  downloadUrl: (art) => art.imageUrl,
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import * as cleveland from "../src/sources/cleveland.js"
-import * as met from "../src/sources/met.js"
-import * as rijks from "../src/sources/rijks.js"
+import * as cleveland from "../src/providers/cleveland.js"
+import * as met from "../src/providers/met.js"
+import * as rijks from "../src/providers/rijks.js"
 import { fixture } from "./helpers.js"
 
 describe("Met", () => {

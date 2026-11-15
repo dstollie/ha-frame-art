@@ -1,7 +1,8 @@
 export const MODES = ["light", "dark", "blur", "fill"] as const
 export type Mode = (typeof MODES)[number]
 
-export type Source = "met" | "rijks" | "cleveland"
+/** Provider id, e.g. "met", "aic", "mine". */
+export type Source = string
 
 export interface Artwork {
   id: string // "<source>:<source_id>"
@@ -19,6 +20,8 @@ export interface Artwork {
   imageUrl: string // best full-size source
   thumbUrl: string // ~600-900 px, loaded by the browser directly
   pageUrl: string
+  /** "CC0", "Public domain", or a licence URL; empty when the provider decides. */
+  licence: string
   aspect: number | null // width / height
   maxPx: number | null
   categories: string[]
@@ -40,6 +43,7 @@ export function newArtwork(a: Pick<Artwork, "id" | "source" | "sourceId" | "titl
     imageUrl: "",
     thumbUrl: "",
     pageUrl: "",
+    licence: "",
     aspect: null,
     maxPx: null,
     categories: [],
@@ -66,17 +70,22 @@ export interface ArtworkDTO {
   year: number | null
   medium: string
   department: string
-  thumb: string
+  licence: string
+  /** Direct image URL for the browser, or null when `thumbPath` must be used. */
+  thumb: string | null
+  /** API path (relative to the API base) for thumbnails the add-on serves itself. */
+  thumbPath: string | null
   page: string
   aspect: number | null
   categories: string[]
   color: string | null
   colorFamily: string | null
-  fillAllowed: boolean
   favourite: boolean
+  /** One of the user's own uploads ("My collection"). */
+  own: boolean
 }
 
-export function toDTO(a: Artwork, favourite: boolean): ArtworkDTO {
+export function toDTO(a: Artwork, favourite: boolean, thumbPath: string | null = null): ArtworkDTO {
   return {
     id: a.id,
     source: a.source,
@@ -86,13 +95,15 @@ export function toDTO(a: Artwork, favourite: boolean): ArtworkDTO {
     year: a.year,
     medium: a.medium,
     department: a.department,
-    thumb: a.thumbUrl,
+    licence: a.licence,
+    thumb: thumbPath ? null : a.thumbUrl,
+    thumbPath,
     page: a.pageUrl,
     aspect: a.aspect,
     categories: a.categories,
     color: a.colorHex,
     colorFamily: a.colorFamily,
-    fillAllowed: fillAllowed(a.aspect),
     favourite,
+    own: a.source === "mine",
   }
 }
