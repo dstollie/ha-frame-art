@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_HOST, CONF_PORT, CONF_TOKEN, DOMAIN, PANEL_ELEMENT, PANEL_JS_PATH, PANEL_URL_PATH
-from .proxy import FrameArtApiView, FrameArtMcpView, FrameArtPanelView
+from .proxy import FrameArtApiView, FrameArtMcpView, FrameArtPanelView, FrameArtUrlsView
 
 VIEWS_REGISTERED = f"{DOMAIN}_views"
 
@@ -20,7 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
     if not hass.data.get(VIEWS_REGISTERED):
         # aiohttp can't remove routes; views look up the current target on every request.
-        for view in (FrameArtApiView(hass), FrameArtMcpView(hass), FrameArtPanelView(hass)):
+        for view in (FrameArtApiView(hass), FrameArtMcpView(hass), FrameArtPanelView(hass), FrameArtUrlsView(hass)):
             hass.http.register_view(view)
         hass.data[VIEWS_REGISTERED] = True
 

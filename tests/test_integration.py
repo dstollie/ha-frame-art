@@ -126,3 +126,17 @@ async def test_addon_down_gives_502(hass: HomeAssistant, hass_client, aioclient_
     await setup(hass)
     aioclient_mock.get(f"{BASE}/api/tvs", exc=TimeoutError())
     assert (await (await hass_client()).get("/api/frame_art/api/tvs")).status == 502
+
+
+async def test_urls_gives_absolute_external_and_internal(hass: HomeAssistant, hass_client, hass_client_no_auth) -> None:
+    await setup(hass)
+    hass.config.external_url = "https://example.ui.nabu.casa"
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    assert (await (await hass_client_no_auth()).get("/api/frame_art/urls")).status == 401
+    data = json.loads(await (await (await hass_client()).get("/api/frame_art/urls")).text())
+    assert data == {
+        "external": "https://example.ui.nabu.casa",
+        "external_is_cloud": True,
+        "internal": "http://192.168.1.10:8123",
+        "mcp_path": "/api/frame_art/mcp",
+    }

@@ -15,8 +15,9 @@ from aiohttp import ClientError, ClientTimeout, web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 
-from .const import API_PREFIX, CONF_HOST, CONF_PORT, CONF_TOKEN, DOMAIN, MCP_PATH, PANEL_JS_PATH
+from .const import API_PREFIX, CONF_HOST, CONF_PORT, CONF_TOKEN, DOMAIN, MCP_PATH, PANEL_JS_PATH, URLS_PATH
 
 FORWARD_REQUEST = ("content-type", "accept", "mcp-session-id", "mcp-protocol-version", "last-event-id")
 FORWARD_RESPONSE = ("content-type", "cache-control", "mcp-session-id", "etag")
@@ -133,3 +134,32 @@ class FrameArtPanelView(HomeAssistantView):
         resp = await _forward(self.hass, request, "/panel/frame-art-panel.js", f"Bearer {token}")
         resp.headers["Cache-Control"] = "no-cache"
         return resp
+
+
+class FrameArtUrlsView(HomeAssistantView):
+    """Where this Home Assistant can be reached, so the panel can show absolute MCP URLs."""
+
+    url = URLS_PATH
+    name = "api:frame_art:urls"
+    requires_auth = True
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
+
+    def _url(self, **kwargs: bool) -> str | None:
+        try:
+            return get_url(self.hass, **kwargs)
+        except NoURLAvailableError:
+            return None
+
+    async def get(self, request: web.Request) -> web.Response:
+        external = self._url(allow_internal=False, prefer_external=True)
+        internal = self._url(allow_external=False, allow_cloud=False)
+        return web.json_response(
+            {
+                "external": external,
+                "external_is_cloud": bool(external and "nabu.casa" in external),
+                "internal": internal,
+                "mcp_path": MCP_PATH,
+            }
+        )
