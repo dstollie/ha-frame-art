@@ -1,0 +1,23 @@
+custom_components/frame_art/manifest.json
+  s_e57963d2c3d792::t_5e02636a047919 12
+frame_art/CHANGELOG.md
+  s_e57963d2c3d792::t_23fbe8021d004e 3-7
+frame_art/config.yaml
+  s_e57963d2c3d792::t_82ed2d4347be8f 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ee2ece91a8bd80d6bad41f7907f409d0430873f0",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
