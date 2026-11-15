@@ -1,0 +1,21 @@
+frame_art/packages/server/src/tv.ts
+  s_e57963d2c3d792::t_f4802a430dab08 15-30,93-96
+frame_art/packages/server/test/tv.test.ts
+  s_e57963d2c3d792::t_5cba60ce142b78 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e532fe39a1075cd4090a91786de02e1dc2efbd7",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
