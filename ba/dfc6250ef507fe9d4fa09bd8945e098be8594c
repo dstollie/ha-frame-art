@@ -1,0 +1,27 @@
+frame_art/packages/frame-tv/package.json
+  s_e57963d2c3d792::t_4dd5ff968bdc30 1-35
+frame_art/packages/frame-tv/src/fake.ts
+  s_e57963d2c3d792::t_296d21280dba0b 1-225
+frame_art/packages/frame-tv/src/index.ts
+  s_e57963d2c3d792::t_e31b56154dfd75 1-366
+frame_art/packages/frame-tv/test/frame.test.ts
+  s_e57963d2c3d792::t_c70b1d4d9ff803 1-143
+frame_art/packages/frame-tv/tsconfig.json
+  s_e57963d2c3d792::t_aa206b177f697b 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "badfc6250ef507fe9d4fa09bd8945e098be8594c",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
