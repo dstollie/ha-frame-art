@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "hassio_confirm": {
+        "title": "Frame Art",
+        "description": "Set up Frame Art? This adds the Frame Art panel to the sidebar and makes its MCP endpoint available."
+      },
+      "user": {
+        "title": "Frame Art",
+        "description": "Connect to the Frame Art add-on. Normally this happens automatically once the add-on is running.",
+        "data": { "host": "Host", "port": "Port", "token": "Internal token" }
+      }
+    },
+    "error": { "cannot_connect": "Can't reach the Frame Art add-on with these details." },
+    "abort": { "already_configured": "Frame Art is already set up." }
+  }
+}

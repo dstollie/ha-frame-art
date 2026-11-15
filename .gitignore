@@ -17,3 +17,10 @@ scratch/
 
 # Local research and notes (RPI); specs/ stays in version control
 thoughts/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

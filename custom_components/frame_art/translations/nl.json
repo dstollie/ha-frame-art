@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "hassio_confirm": {
+        "title": "Frame Art",
+        "description": "Frame Art instellen? Dit zet het Frame Art-paneel in de zijbalk en maakt het MCP-endpoint beschikbaar."
+      },
+      "user": {
+        "title": "Frame Art",
+        "description": "Verbind met de Frame Art-add-on. Normaal gebeurt dit vanzelf zodra de add-on draait.",
+        "data": { "host": "Host", "port": "Poort", "token": "Intern token" }
+      }
+    },
+    "error": { "cannot_connect": "De Frame Art-add-on is met deze gegevens niet bereikbaar." },
+    "abort": { "already_configured": "Frame Art is al ingesteld." }
+  }
+}
