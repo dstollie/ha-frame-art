@@ -217,9 +217,12 @@ export function createApi(svc: Services) {
       const tv = tvOr404(c.req.param("tv"))
       try {
         const r = await tv.pair()
+        console.log(`pair ${tv.id}: accepted, art API ${r.apiVersion}, paired=${tv.paired}`)
         return c.json({ ok: true as const, paired: tv.paired, apiVersion: r.apiVersion })
       } catch (e) {
-        throw new HTTPException(502, { message: e instanceof Error ? e.message : String(e) })
+        const message = e instanceof Error ? e.message : String(e)
+        console.warn(`pair ${tv.id}: ${message}`)
+        throw new HTTPException(502, { message })
       }
     })
     .get("/jobs/:id", (c) => {

@@ -23,8 +23,11 @@ function fakeCert() {
 }
 
 export interface FakeFrameOptions {
-  /** What happens when a client connects without a valid token. */
-  onPairing?: "allow" | "deny" | "ignore"
+  /**
+   * What happens when a client connects without a valid token. "trusted" accepts it without
+   * handing out a token, as a real Frame does when it already trusts the client (seen on a 2022 LS03B).
+   */
+  onPairing?: "allow" | "trusted" | "deny" | "ignore"
   /** Use a TLS D2D socket ("secured": true), as some firmware does. */
   securedUpload?: boolean
   powerState?: "on" | "standby" | "off"
@@ -123,7 +126,8 @@ export class FakeFrame {
         return
       }
       if (decision === "ignore") return // user never presses anything
-      this.emit(ws, "ms.channel.connect", { id: randomUUID(), token: this.token, clients: [] })
+      const issued = decision === "trusted" ? {} : { token: this.token }
+      this.emit(ws, "ms.channel.connect", { id: randomUUID(), ...issued, clients: [] })
     } else {
       this.emit(ws, "ms.channel.connect", { id: randomUUID(), clients: [] })
     }

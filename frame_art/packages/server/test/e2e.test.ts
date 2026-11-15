@@ -37,8 +37,12 @@ class FakeHA implements HomeAssistant {
   }
 }
 
-async function boot(opts: { power?: "on" | "standby"; wake?: boolean; paired?: boolean } = {}) {
-  frame = await new FakeFrame({ powerState: opts.power ?? "on", noisy: true }).start()
+async function boot(opts: { power?: "on" | "standby"; wake?: boolean; paired?: boolean; trusted?: boolean } = {}) {
+  frame = await new FakeFrame({
+    powerState: opts.power ?? "on",
+    noisy: true,
+    ...(opts.trusted ? { onPairing: "trusted" as const } : {}),
+  }).start()
   settings = tempSettings({
     tvs: [
       {
@@ -109,6 +113,22 @@ describe("pairing", () => {
     const tokenFile = path.join(paths(settings).tokens, "woonkamer.token")
     expect(readFileSync(tokenFile, "utf8")).toBe(frame.token)
     expect(frame.clientNames).toEqual(["FrameArt"])
+  })
+})
+
+describe("pairing with a TV that hands out no token", () => {
+  it("counts as paired once the TV accepted the connection, and one tap then works", async () => {
+    await boot({ paired: false, trusted: true })
+    const r = await api.tvs[":tv"].pair.$post({ param: { tv: "woonkamer" } })
+    expect(await r.json()).toMatchObject({ ok: true, paired: true, apiVersion: "4.3.4.0" })
+    expect(existsSync(path.join(paths(settings).tokens, "woonkamer.token"))).toBe(false)
+    expect(existsSync(path.join(paths(settings).tokens, "woonkamer.paired"))).toBe(true)
+    const tvs = await (await api.tvs.$get()).json()
+    expect(tvs[0]).toMatchObject({ paired: true })
+
+    const show = await api.tvs[":tv"].show.$post({ param: { tv: "woonkamer" }, json: { artworkId: "met:1" } })
+    expect((await waitJob((await show.json()).id)).status).toBe("done")
+    expect(frame.images.size).toBe(1)
   })
 })
 

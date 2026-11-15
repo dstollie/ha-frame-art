@@ -38,6 +38,14 @@ describe("pairing", () => {
     expect(tokens).toEqual([])
   })
 
+  it("connects without a token when the TV already trusts the client", async () => {
+    const t = await fake({ onPairing: "trusted" })
+    const tokens: string[] = []
+    client = await connect(t, { onToken: (tok) => void tokens.push(tok) })
+    expect(tokens).toEqual([])
+    expect(await client.apiVersion()).toBe("4.3.4.0")
+  })
+
   it("fails clearly when the user presses Weigeren", async () => {
     const t = await fake({ onPairing: "deny" })
     await expect(connect(t)).rejects.toMatchObject({ code: "unauthorized" })

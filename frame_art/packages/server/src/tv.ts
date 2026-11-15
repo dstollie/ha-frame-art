@@ -24,6 +24,7 @@ export interface TV {
 export class FrameTV implements TV {
   readonly id: string
   private readonly tokenFile: string
+  private readonly pairedFile: string
   private chain: Promise<unknown> = Promise.resolve()
 
   constructor(
@@ -32,14 +33,20 @@ export class FrameTV implements TV {
   ) {
     this.id = cfg.id
     this.tokenFile = path.join(tokenDir, `${cfg.id}.token`)
+    this.pairedFile = path.join(tokenDir, `${cfg.id}.paired`)
   }
 
+  /**
+   * Paired once the TV accepted us. Some Frames hand out a token on that first connection,
+   * others (already trusting the client) accept it without one; both count.
+   */
   get paired(): boolean {
-    return existsSync(this.tokenFile) && readFileSync(this.tokenFile, "utf8").trim().length > 0
+    return existsSync(this.pairedFile) || this.token() !== null
   }
 
   private token(): string | null {
-    return this.paired ? readFileSync(this.tokenFile, "utf8").trim() : null
+    if (!existsSync(this.tokenFile)) return null
+    return readFileSync(this.tokenFile, "utf8").trim() || null
   }
 
   async isOn(): Promise<boolean> {
@@ -56,7 +63,7 @@ export class FrameTV implements TV {
 
   private async withClient<T>(fn: (c: FrameArtClient) => Promise<T>, pairing = false): Promise<T> {
     const token = this.token()
-    if (!token && !pairing) throw new FrameError(`${this.cfg.name} is nog niet gekoppeld`, "unauthorized")
+    if (!this.paired && !pairing) throw new FrameError(`${this.cfg.name} is nog niet gekoppeld`, "unauthorized")
     const client = await FrameArtClient.connect({
       host: this.cfg.host,
       port: this.cfg.wsPort ?? 8002,
@@ -73,7 +80,17 @@ export class FrameTV implements TV {
   }
 
   pair() {
-    return this.serial(() => this.withClient(async (c) => ({ apiVersion: await c.apiVersion() }), true))
+    return this.serial(() =>
+      this.withClient(async (c) => {
+        const apiVersion = await c.apiVersion()
+        writeFileSync(
+          this.pairedFile,
+          JSON.stringify({ pairedAt: new Date().toISOString(), apiVersion, token: this.token() !== null }),
+          { mode: 0o600 },
+        )
+        return { apiVersion }
+      }, true),
+    )
   }
 
   /** Upload, select and switch Art Mode on in one connection. Returns the content id. */
