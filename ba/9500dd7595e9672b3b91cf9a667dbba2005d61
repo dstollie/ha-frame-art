@@ -1,0 +1,25 @@
+custom_components/frame_art/__init__.py
+  s_e57963d2c3d792::t_1e5d5c2ba5fca1 10,23
+custom_components/frame_art/const.py
+  s_e57963d2c3d792::t_768187d330c2a2 14
+custom_components/frame_art/proxy.py
+  s_e57963d2c3d792::t_191617fc5d4b61 18,20,137-165
+tests/test_integration.py
+  s_e57963d2c3d792::t_b7b06a8108067b 129-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba9500dd7595e9672b3b91cf9a667dbba2005d61",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
