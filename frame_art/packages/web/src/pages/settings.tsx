@@ -292,6 +292,14 @@ export function SettingsPage() {
 
       <Card header={t.sources}>
         <p className="px-4 pb-2 text-sm text-text2">{t.sourcesHelp}</p>
+        {sources.error && (
+          <div className="px-4 pb-3">
+            <Alert type="error" title={t.loadFailed}>
+              {sources.error.message}
+            </Alert>
+          </div>
+        )}
+        {sources.isLoading && <div className="mx-4 mb-3 h-10 animate-pulse rounded bg-bg2" />}
         {sources.data?.map((src) => (
           <SourceRow key={src.id} s={src} />
         ))}
@@ -330,6 +338,18 @@ export function SettingsPage() {
           <div className="px-4 pb-3">
             <Alert type="warning">{s.error}</Alert>
           </div>
+        )}
+        {(sync.error ?? startSync.error) && (
+          <div className="px-4 pb-3">
+            <Alert type="error" title={t.loadFailed}>
+              {(sync.error ?? startSync.error)!.message}
+            </Alert>
+          </div>
+        )}
+        {startSync.isSuccess && s?.state !== "running" && (
+          <p role="status" className="px-4 pb-3 text-sm text-text2">
+            {startSync.data.started ? t.syncStarted : t.syncAlreadyRunning}
+          </p>
         )}
       </Card>
     </div>

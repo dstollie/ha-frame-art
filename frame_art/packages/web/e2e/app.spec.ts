@@ -281,3 +281,35 @@ test("phone: a series page fits and can be played", async ({ page }, info) => {
   await expect(page.getByRole("button", { name: "Move down" }).first()).toBeVisible()
   await page.request.delete(`${api}/series/${s.id}`)
 })
+
+test("Settings: when the add-on can't be reached, the panel says so instead of showing empty cards", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "settings run once")
+  test.setTimeout(90_000)
+  await page.route("**/api/frame_art/api/settings/sources", (r) =>
+    r.fulfill({
+      status: 502,
+      contentType: "application/json",
+      body: '{"error":"The Frame Art add-on isn\'t reachable"}',
+    }),
+  )
+  await page.route("**/api/frame_art/api/sync", (r) =>
+    r.fulfill({
+      status: 502,
+      contentType: "application/json",
+      body: '{"error":"The Frame Art add-on isn\'t reachable"}',
+    }),
+  )
+  await page.goto("/frame-art/settings")
+  await expect(page.getByText("Couldn't reach the Frame Art add-on")).toHaveCount(2, { timeout: 20_000 })
+  await expect(page.getByText("The Frame Art add-on isn't reachable").first()).toBeVisible()
+  await page.unrouteAll({ behavior: "ignoreErrors" })
+  await page.goto("/frame-art/settings")
+  // Either a refresh is already running (the source toggle in another test starts one) and the
+  // card says so, or pressing the button confirms that it started.
+  const refresh = page.getByRole("button", { name: "Refresh now" })
+  await expect(refresh).toBeVisible()
+  if (await refresh.isEnabled()) await refresh.click()
+  await expect(page.getByText(/Refresh started|already running|Fetching/).first()).toBeVisible()
+})
