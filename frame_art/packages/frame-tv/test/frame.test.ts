@@ -12,7 +12,14 @@ async function fake(opts: FakeFrameOptions = {}) {
 }
 
 function connect(t: FakeFrame, extra: Partial<Parameters<typeof FrameArtClient.connect>[0]> = {}) {
-  return FrameArtClient.connect({ host: "127.0.0.1", port: t.wsPort, timeoutMs: 2000, pairTimeoutMs: 1500, ...extra })
+  return FrameArtClient.connect({
+    host: "127.0.0.1",
+    port: t.wsPort,
+    timeoutMs: 2000,
+    pairTimeoutMs: 1500,
+    ackTimeoutMs: 300,
+    ...extra,
+  })
 }
 
 afterEach(async () => {
@@ -87,6 +94,40 @@ describe("art requests", () => {
     })
     expect(send.image_date).toMatch(/^\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}$/)
     expect(send.id).toBe(send.request_id)
+  })
+
+  it.each(["broadcast", "silent"] as const)(
+    "shows the work when the TV answers select and Art Mode with %s (2022 firmware)",
+    async (answers) => {
+      const t = await fake({ answers })
+      const unmatched: unknown[] = []
+      client = await connect(t, { token: t.token, onUnmatched: (p) => void unmatched.push(p) })
+      const id = await client.upload(Buffer.alloc(2000, 3))
+      const started = Date.now()
+      await client.selectImage(id)
+      await client.setArtMode(true)
+      expect(t.current).toBe(id)
+      expect(t.artMode).toBe(true)
+      if (answers === "broadcast") {
+        expect(Date.now() - started).toBeLessThan(1500)
+        expect(unmatched).toEqual([])
+      }
+    },
+  )
+
+  it("still fails select_image when the TV answers with an error for our request", async () => {
+    const t = await fake({ answers: "silent", failRequests: { select_image: "-11" } })
+    client = await connect(t, { token: t.token })
+    await expect(client.selectImage("MY_F0404")).rejects.toThrow(/select_image.*-11/)
+  })
+
+  it("reports events nobody waited for", async () => {
+    const t = await fake({ answers: "broadcast" })
+    const unmatched: { event?: string }[] = []
+    client = await connect(t, { token: t.token, onUnmatched: (p) => void unmatched.push(p) })
+    await client.request("get_artmode_status")
+    await client.setArtMode(false)
+    expect(unmatched.map((u) => u.event)).not.toContain("get_artmode_status")
   })
 
   it("uploads over a TLS D2D socket when the TV asks for it", async () => {

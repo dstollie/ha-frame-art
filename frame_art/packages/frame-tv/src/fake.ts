@@ -35,6 +35,11 @@ export interface FakeFrameOptions {
   failRequests?: Record<string, string>
   /** Send unrelated events between answers, like a real TV does. */
   noisy?: boolean
+  /**
+   * How select_image and set_artmode_status are answered: "echo" (our request id), "broadcast"
+   * (a different event without our id), or "silent" (no answer; seen on a 2022 QE55LS03B).
+   */
+  answers?: "echo" | "broadcast" | "silent"
 }
 
 export interface FakeImage {
@@ -116,6 +121,12 @@ export class FakeFrame {
     this.emit(ws, "d2d_service_message", JSON.stringify(payload))
   }
 
+  private confirm(ws: WebSocket, echo: Record<string, unknown>, broadcast: Record<string, unknown>) {
+    const style = this.options.answers ?? "echo"
+    if (style === "echo") this.d2d(ws, echo)
+    else if (style === "broadcast") this.d2d(ws, broadcast)
+  }
+
   private onConnection(ws: WebSocket, url: URL) {
     this.clientNames.push(Buffer.from(url.searchParams.get("name") ?? "", "base64").toString())
     const token = url.searchParams.get("token")
@@ -164,11 +175,25 @@ export class FakeFrame {
           })
         }
         if (req.show) this.current = cid
-        return this.d2d(ws, { event: "select_image", request_id: id, id, content_id: cid })
+        return this.confirm(
+          ws,
+          { event: "select_image", request_id: id, id, content_id: cid },
+          {
+            event: "image_selected",
+            content_id: cid,
+          },
+        )
       }
       case "set_artmode_status":
         this.artMode = req.value === "on"
-        return this.d2d(ws, { event: "set_artmode_status", request_id: id, id, value: req.value })
+        return this.confirm(
+          ws,
+          { event: "set_artmode_status", request_id: id, id, value: req.value },
+          {
+            event: "artmode_status",
+            value: req.value,
+          },
+        )
       case "get_artmode_status":
         return this.d2d(ws, { event: "get_artmode_status", request_id: id, id, value: this.artMode ? "on" : "off" })
       case "delete_image_list": {

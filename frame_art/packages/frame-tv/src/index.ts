@@ -12,6 +12,8 @@ import { WebSocket, type RawData } from "ws"
 
 export const ART_CHANNEL = "com.samsung.art-app"
 export const DEFAULT_NAME = "FrameArt"
+/** How long to wait for an optional confirmation before assuming the TV did it. */
+export const ACK_TIMEOUT_MS = 4000
 
 export class FrameError extends Error {
   constructor(
@@ -34,6 +36,10 @@ export interface FrameOptions {
   token?: string | null
   /** Called when the TV hands out a (new) token on connect. Persist it. */
   onToken?: (token: string) => void | Promise<void>
+  /** How long select_image/set_artmode_status wait for a confirmation that may never come. */
+  ackTimeoutMs?: number
+  /** Every d2d event no request was waiting for: firmware differences show up here first. */
+  onUnmatched?: (payload: D2DPayload) => void
   timeoutMs?: number
   /** How long to wait for the user to press Toestaan on first pairing. */
   pairTimeoutMs?: number
@@ -45,6 +51,8 @@ interface Waiter {
   match: (p: D2DPayload) => boolean
   /** Errors are only attributed to a waiter when the request id matches. */
   requestId: string | null
+  /** Sub-events that confirm this request even without our request id (2022 firmware broadcasts them). */
+  acceptsUnmatched: readonly string[]
   resolve: (p: D2DPayload) => void
   reject: (e: Error) => void
   timer: NodeJS.Timeout
@@ -189,16 +197,27 @@ export class FrameArtClient {
     if (!payload || typeof payload !== "object") return
     const msgId = (payload.request_id ?? payload.id) as string | undefined
 
+    let consumed = false
     for (const w of this.waiters) {
-      if (w.requestId && msgId !== w.requestId) continue
+      if (w.requestId && msgId !== w.requestId) {
+        if (payload.event && w.acceptsUnmatched.includes(payload.event)) {
+          consumed = true
+          this.settle(w, payload)
+        }
+        continue
+      }
       if (payload.event === "error") {
         if (!w.requestId) continue
         const req = parseMaybeJson<{ request?: string }>(payload.request_data)?.request ?? "request"
         this.settle(w, new FrameError(`\`${req}\` mislukte met foutcode ${String(payload.error_code ?? "?")}`))
         continue
       }
-      if (w.match(payload)) this.settle(w, payload)
+      if (w.match(payload)) {
+        consumed = true
+        this.settle(w, payload)
+      }
     }
+    if (!consumed) this.opts.onUnmatched?.(payload)
   }
 
   private settle(w: Waiter, result: D2DPayload | Error): void {
@@ -217,16 +236,23 @@ export class FrameArtClient {
     requestId: string | null,
     subEvent: string | null,
     timeoutMs = this.opts.timeoutMs,
+    ack: { events?: readonly string[]; optional?: boolean; label?: string } = {},
   ): Promise<D2DPayload> {
     if (this.closed) return Promise.reject(new FrameError("Verbinding is gesloten", "connection"))
     return new Promise((resolve, reject) => {
+      const label = ack.label ?? subEvent ?? "verzoek"
       const w: Waiter = {
         requestId,
+        acceptsUnmatched: ack.events ?? [],
         match: (p) => !subEvent || p.event === subEvent,
         resolve,
         reject,
         timer: setTimeout(
-          () => this.settle(w, new FrameError(`Geen antwoord op ${subEvent ?? "verzoek"}`, "timeout")),
+          () =>
+            this.settle(
+              w,
+              ack.optional ? { event: "unconfirmed" } : new FrameError(`Geen antwoord op ${label}`, "timeout"),
+            ),
           timeoutMs,
         ),
       }
@@ -247,10 +273,19 @@ export class FrameArtClient {
   async request(
     request: string,
     params: Record<string, unknown> = {},
-    opts: { subEvent?: string; timeoutMs?: number; requestId?: string } = {},
+    opts: {
+      subEvent?: string
+      timeoutMs?: number
+      requestId?: string
+      /**
+       * Some requests are answered with a broadcast (other or no request id) or not at all.
+       * `events` confirm them anyway; `optional` treats silence as success after `timeoutMs`.
+       */
+      ack?: { events?: readonly string[]; optional?: boolean }
+    } = {},
   ): Promise<D2DPayload> {
     const id = opts.requestId ?? randomUUID()
-    const answer = this.waitFor(id, opts.subEvent ?? null, opts.timeoutMs)
+    const answer = this.waitFor(id, opts.subEvent ?? null, opts.timeoutMs, { ...opts.ack, label: request })
     this.send({ request, ...params, id, request_id: id })
     return answer
   }
@@ -313,12 +348,31 @@ export class FrameArtClient {
     return done.content_id
   }
 
+  /**
+   * The 2022 Frame (QE55LS03B, art API 4.3.4.0) shows the work but answers select_image and
+   * set_artmode_status with a broadcast or not at all. samsungtvws 2.x never waited for them either.
+   * An error with our request id still fails.
+   */
   async selectImage(contentId: string, show = true): Promise<void> {
-    await this.request("select_image", { category_id: null, content_id: contentId, show })
+    await this.request(
+      "select_image",
+      { category_id: null, content_id: contentId, show },
+      {
+        timeoutMs: this.opts.ackTimeoutMs ?? ACK_TIMEOUT_MS,
+        ack: { events: ["select_image", "image_selected"], optional: true },
+      },
+    )
   }
 
   async setArtMode(on: boolean): Promise<void> {
-    await this.request("set_artmode_status", { value: on ? "on" : "off" })
+    await this.request(
+      "set_artmode_status",
+      { value: on ? "on" : "off" },
+      {
+        timeoutMs: this.opts.ackTimeoutMs ?? ACK_TIMEOUT_MS,
+        ack: { events: ["set_artmode_status", "artmode_status"], optional: true },
+      },
+    )
   }
 
   async getArtMode(): Promise<boolean> {
