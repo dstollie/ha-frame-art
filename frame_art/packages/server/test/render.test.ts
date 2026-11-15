@@ -12,6 +12,8 @@ import {
   dominantColor,
   encodeJpeg,
   renderJpeg,
+  centredCrop,
+  smartCrop,
 } from "../src/render.js"
 import { jpeg } from "./helpers.js"
 
@@ -29,6 +31,27 @@ async function pixels(buf: Buffer) {
   }
 }
 const close = (a: number[], b: number[], tol = 6) => a.every((v, i) => Math.abs(v - b[i]!) <= tol)
+const isRed = ([r, g, b]: number[]) => r! > 170 && g! < 90 && b! < 90
+
+/** A flat grey canvas with a detailed red subject at vertical position `y` (0–1). */
+async function subjectAt(w: number, h: number, y: number): Promise<Buffer> {
+  const size = Math.round(w * 0.3)
+  const stripes = Array.from(
+    { length: 12 },
+    (_, i) => `<rect x="0" y="${(i * size) / 12}" width="${size}" height="${size / 24}" fill="#200"/>`,
+  ).join("")
+  const subject = await sharp(
+    Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="100%" height="100%" fill="#e01010"/>${stripes}<circle cx="${size / 2}" cy="${size / 2}" r="${size / 5}" fill="#fff"/></svg>`,
+    ),
+  )
+    .png()
+    .toBuffer()
+  return sharp({ create: { width: w, height: h, channels: 3, background: { r: 128, g: 128, b: 128 } } })
+    .composite([{ input: subject, left: Math.round((w - size) / 2), top: Math.round(h * y) }])
+    .jpeg({ quality: 92 })
+    .toBuffer()
+}
 
 describe("render", () => {
   const sizes: [number, number][] = [
@@ -89,11 +112,51 @@ describe("render", () => {
     expect(Math.abs(full.y / 2160 - small.y / 720)).toBeLessThan(0.002)
   })
 
-  it("fill covers the screen for near-16:9 and falls back to light for portrait", async () => {
-    const wide = await pixels(await renderJpeg(await jpeg(3200, 1900, [30, 120, 60]), "fill"))
-    expect(close(wide.at(2, 2), LIGHT)).toBe(false)
-    const tall = await pixels(await renderJpeg(await jpeg(1800, 2400), "fill"))
-    expect(close(tall.at(5, 5), LIGHT)).toBe(true)
+  it("fill crops every aspect ratio to exactly 3840x2160 without a matte", async () => {
+    for (const [w, h] of [
+      [3200, 1900],
+      [1800, 2400],
+      [6000, 1500],
+      [900, 600],
+    ] as const) {
+      const px = await pixels(await renderJpeg(await jpeg(w, h, [30, 120, 60]), "fill"))
+      expect([px.info.width, px.info.height]).toEqual([3840, 2160])
+      for (const [x, y] of [
+        [2, 2],
+        [3837, 2],
+        [2, 2157],
+        [3837, 2157],
+      ] as const) {
+        expect(close(px.at(x, y), LIGHT)).toBe(false)
+        expect(close(px.at(x, y), DARK)).toBe(false)
+      }
+    }
+  })
+
+  it("fill keeps the subject in frame instead of cutting the centre (attention crop)", async () => {
+    const portrait = await subjectAt(1200, 2400, 0.12) // a red "face" near the top
+    const px = await pixels(await renderJpeg(portrait, "fill"))
+    let red = 0
+    for (let y = 0; y < 2160; y += 8) for (let x = 0; x < 3840; x += 8) if (isRed(px.at(x, y))) red++
+    // A centre crop shows rows 862–1537 of 2400 and would contain no red at all.
+    expect(red / ((3840 / 8) * (2160 / 8))).toBeGreaterThan(0.02)
+  })
+
+  it("centredCrop gives the middle 16:9 window", () => {
+    expect(centredCrop(1)).toEqual({ left: 0, top: 0.2188, width: 1, height: 0.5625 })
+    expect(centredCrop(4)).toEqual({ left: 0.2778, top: 0, width: 0.4444, height: 1 })
+    expect(centredCrop(null)).toEqual({ left: 0, top: 0, width: 1, height: 1 })
+  })
+
+  it("smartCrop reports where the 16:9 window sits, for the preview", async () => {
+    const top = await smartCrop(await subjectAt(1200, 2400, 0.12))
+    expect(top.width).toBeCloseTo(1, 2)
+    expect(top.height).toBeCloseTo((1200 * 9) / 16 / 2400, 2)
+    expect(top.top).toBeLessThan(0.15)
+    const bottom = await smartCrop(await subjectAt(1200, 2400, 0.85))
+    expect(bottom.top).toBeGreaterThan(0.5)
+    const wide = await smartCrop(await jpeg(3840, 2160))
+    expect(wide).toEqual({ left: 0, top: 0, width: 1, height: 1 })
   })
 
   it("handles PNG with alpha and CMYK JPEG", async () => {

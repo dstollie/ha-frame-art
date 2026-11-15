@@ -103,6 +103,7 @@ const base = `http://localhost:${port}`
 const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
   const u = String(url instanceof Request ? url.url : url)
   if (u.startsWith(`${base}/__museum/`)) return museum.request(u.replace(`${base}/__museum`, ""))
+  if (u.startsWith(`${PREFIX}/__museum/`)) return museum.request(u.replace(`${PREFIX}/__museum`, ""))
   return fetch(url, init)
 }) as typeof fetch
 

@@ -6,7 +6,7 @@ import type { Settings } from "./config.js"
 import type { Store } from "./db.js"
 import type { HomeAssistant } from "./ha.js"
 import { touch, type ImageCache } from "./images.js"
-import { fillAllowed, type Artwork, type Mode } from "./models.js"
+import type { Artwork, Mode } from "./models.js"
 import { renderJpeg } from "./render.js"
 import type { TV } from "./tv.js"
 
@@ -174,9 +174,5 @@ export class JobRunner {
       landscape: !favourites,
     }
     return this.store.random(q, this.store.recentIds(tv, 60)) ?? this.store.random(q)
-  }
-
-  modeFor(art: Artwork, wanted: Mode): Mode {
-    return wanted === "fill" && !fillAllowed(art.aspect) ? "light" : wanted
   }
 }

@@ -14,7 +14,19 @@ import { ImageCache } from "./images.js"
 import { JobRunner } from "./jobs.js"
 import { MODES, toDTO, type Artwork, type ArtworkDTO, type Mode } from "./models.js"
 import { ID_TO_LABEL, PREFIX, ROTATION_OPTIONS, type MqttBridge } from "./mqtt.js"
-import { COLOR_FAMILIES, H, LAYOUT, MAX_UPSCALE, W, bevelWidth, thumbnailJpeg } from "./render.js"
+import {
+  COLOR_FAMILIES,
+  H,
+  LAYOUT,
+  MAX_UPSCALE,
+  W,
+  bevelWidth,
+  centredCrop,
+  smartCrop,
+  thumbnailJpeg,
+  type Crop,
+} from "./render.js"
+import { USER_AGENT } from "./sources/index.js"
 import type { Fetch } from "./sources/index.js"
 import { Syncer } from "./sync.js"
 import type { TV } from "./tv.js"
@@ -38,6 +50,12 @@ const validate = <T extends keyof ValidationTargets, S extends z.ZodType>(target
       })
     }
   })
+
+const DisplaySchema = z.object({
+  display: z.enum(["fill", "matte"]),
+  matteStyle: z.enum(["light", "dark", "blur"]),
+})
+export type DisplaySetting = z.infer<typeof DisplaySchema>
 
 const rotationIds = ROTATION_OPTIONS.map(([id]) => id) as [string, ...string[]]
 
@@ -83,14 +101,54 @@ export function createServices(deps: Deps) {
     ha,
     mqtt: null as MqttBridge | null,
     categoryOf: (tv: string) => store.getMeta(`category:${tv}`) ?? "alles",
+    /** Per TV: fill the screen (smart crop, the default) or a passe-partout in the given style. */
+    displayOf(tv: string): DisplaySetting {
+      const fallback: DisplaySetting = {
+        display: "fill",
+        matteStyle: settings.defaultMode === "fill" ? "light" : settings.defaultMode,
+      }
+      const raw = store.getMeta(`display:${tv}`)
+      if (!raw) return fallback
+      const parsed = DisplaySchema.safeParse(JSON.parse(raw))
+      return parsed.success ? parsed.data : fallback
+    },
+    setDisplay(tv: string, value: DisplaySetting) {
+      store.setMeta(`display:${tv}`, JSON.stringify(value))
+    },
+    /** An explicit mode ("deze keer passe-partout") wins; otherwise the TV's setting decides. */
+    modeFor(tv: string, wanted?: Mode): Mode {
+      if (wanted) return wanted
+      const d = svc.displayOf(tv)
+      return d.display === "fill" ? "fill" : d.matteStyle
+    },
     runner: null as unknown as JobRunner,
+    crops: new Map<string, Crop>(),
+    /** Where "fill" will cut this work, from its thumbnail; the preview shows exactly that window. */
+    async cropOf(art: Artwork): Promise<Crop> {
+      const hit = svc.crops.get(art.id)
+      if (hit) return hit
+      let crop: Crop
+      try {
+        const r = await (deps.fetchFn ?? fetch)(art.thumbUrl, {
+          headers: { "User-Agent": USER_AGENT },
+          signal: AbortSignal.timeout(20_000),
+        })
+        if (!r.ok) throw new Error(`thumbnail ${r.status}`)
+        crop = await smartCrop(Buffer.from(await r.arrayBuffer()))
+      } catch {
+        return centredCrop(art.aspect)
+      }
+      if (svc.crops.size > 500) svc.crops.delete(svc.crops.keys().next().value!)
+      svc.crops.set(art.id, crop)
+      return crop
+    },
     async onShown(tv: string, art: Artwork, jpeg: Buffer) {
       if (svc.mqtt) svc.mqtt.publishCurrent(tv, art, await thumbnailJpeg(jpeg))
     },
     next(tv: string) {
       const art = svc.runner.pickNext(tv, svc.categoryOf(tv))
       if (!art) throw new HTTPException(404, { message: "Geen werk gevonden in deze categorie" })
-      return svc.runner.submit(tv, art.id, svc.runner.modeFor(art, settings.defaultMode))
+      return svc.runner.submit(tv, art.id, svc.modeFor(tv))
     },
     async setCategory(tv: string, category: string) {
       if (!rotationIds.includes(category)) return
@@ -177,6 +235,7 @@ export function createApi(svc: Services) {
             const last = store.history(1, cfg.id)[0]
             const art = last ? store.get(last.artworkId) : null
             const job = runner.latest(cfg.id)
+            const display = svc.displayOf(cfg.id)
             return {
               id: cfg.id,
               name: cfg.name,
@@ -184,6 +243,8 @@ export function createApi(svc: Services) {
               on: await tv.isOn(),
               canWake: Boolean(cfg.wakeEntity),
               category: svc.categoryOf(cfg.id),
+              display: display.display,
+              matteStyle: display.matteStyle,
               current: art && last ? { artwork: artDTO(art), shownAt: last.shownAt, mode: last.mode as Mode } : null,
               job: job && (job.status === "queued" || job.status === "running") ? job : null,
             }
@@ -199,13 +260,23 @@ export function createApi(svc: Services) {
         const { artworkId, mode } = c.req.valid("json")
         const art = artOr404(artworkId)
         if (!tv.paired) throw new HTTPException(409, { message: "Deze TV is nog niet gekoppeld" })
-        return c.json(runner.submit(tv.id, art.id, runner.modeFor(art, mode ?? settings.defaultMode)))
+        return c.json(runner.submit(tv.id, art.id, svc.modeFor(tv.id, mode)))
       },
     )
     .post("/tvs/:tv/next", (c) => {
       const tv = tvOr404(c.req.param("tv"))
       if (!tv.paired) throw new HTTPException(409, { message: "Deze TV is nog niet gekoppeld" })
       return c.json(svc.next(tv.id))
+    })
+    .put("/tvs/:tv/display", validate("json", DisplaySchema), (c) => {
+      const tv = tvOr404(c.req.param("tv"))
+      const value = c.req.valid("json")
+      svc.setDisplay(tv.id, value)
+      return c.json(value)
+    })
+    .get("/artworks/:id/crop", async (c) => {
+      const art = artOr404(c.req.param("id"))
+      return c.json(await svc.cropOf(art))
     })
     .put("/tvs/:tv/category", validate("json", z.object({ category: z.enum(rotationIds) })), async (c) => {
       const tv = tvOr404(c.req.param("tv"))

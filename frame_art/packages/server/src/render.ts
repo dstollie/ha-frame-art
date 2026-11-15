@@ -5,7 +5,7 @@
  */
 import sharp, { type OverlayOptions, type Sharp } from "sharp"
 
-import { fillAllowed, type Mode } from "./models.js"
+import type { Mode } from "./models.js"
 
 sharp.cache(false)
 sharp.concurrency(2)
@@ -80,7 +80,6 @@ async function shadowLayer(box: Box, strength: number, size: [number, number]): 
 export async function render(data: Buffer, mode: Mode, size: [number, number] = [W, H]): Promise<Sharp> {
   const [cw, ch] = size
   const src = await prepare(data)
-  if (mode === "fill" && !fillAllowed(src.width / src.height)) mode = "light"
   const spec = LAYOUT[mode]
 
   if (mode === "fill") {
@@ -122,6 +121,50 @@ export async function render(data: Buffer, mode: Mode, size: [number, number] = 
   const art = await src.img.resize(box.w, box.h, { fit: "fill", kernel: "lanczos3" }).png().toBuffer()
   layers.push({ input: art, left: box.x, top: box.y })
   return sharp(canvas).composite(layers)
+}
+
+/** Rounded to 4 decimals; `+ 0` turns -0 into 0. */
+const round4 = (n: number) => Math.round(n * 10_000) / 10_000 + 0
+
+export interface Crop {
+  /** Fractions of the source: where the 16:9 window sits. */
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** The centre 16:9 window for a work of this aspect; used when the thumbnail can't be read. */
+export function centredCrop(aspect: number | null): Crop {
+  const a = aspect ?? 16 / 9
+  const width = Math.min(1, 16 / 9 / a)
+  const height = Math.min(1, a / (16 / 9))
+  return { left: round4((1 - width) / 2), top: round4((1 - height) / 2), width: round4(width), height: round4(height) }
+}
+
+/**
+ * Where "fill" cuts a work to 16:9: sharp's attention strategy (skin tones, saturation, detail),
+ * so faces and the subject stay in frame. Computed on a small copy; the preview uses it as-is.
+ */
+export async function smartCrop(data: Buffer): Promise<Crop> {
+  const meta = await sharp(data, { failOn: "none" }).rotate().metadata()
+  const swap = (meta.orientation ?? 1) >= 5
+  const w = (swap ? meta.height : meta.width) ?? 1
+  const h = (swap ? meta.width : meta.height) ?? 1
+  const [tw, th] = [480, 270]
+  const { info } = await sharp(data, { failOn: "none" })
+    .rotate()
+    .resize(tw, th, { fit: "cover", position: sharp.strategy.attention })
+    .toBuffer({ resolveWithObject: true })
+  const scale = Math.max(tw / w, th / h)
+  const [sw, sh] = [w * scale, h * scale]
+  const offset = info as typeof info & { cropOffsetLeft?: number; cropOffsetTop?: number }
+  return {
+    left: round4(-(offset.cropOffsetLeft ?? 0) / sw),
+    top: round4(-(offset.cropOffsetTop ?? 0) / sh),
+    width: round4(Math.min(1, tw / sw)),
+    height: round4(Math.min(1, th / sh)),
+  }
 }
 
 export async function encodeJpeg(img: Sharp, maxBytes = MAX_BYTES): Promise<Buffer> {

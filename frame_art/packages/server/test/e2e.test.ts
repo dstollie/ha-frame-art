@@ -37,11 +37,20 @@ class FakeHA implements HomeAssistant {
   }
 }
 
-async function boot(opts: { power?: "on" | "standby"; wake?: boolean; paired?: boolean; trusted?: boolean } = {}) {
+async function boot(
+  opts: {
+    power?: "on" | "standby"
+    wake?: boolean
+    paired?: boolean
+    trusted?: boolean
+    answers?: "echo" | "broadcast" | "silent"
+  } = {},
+) {
   frame = await new FakeFrame({
     powerState: opts.power ?? "on",
     noisy: true,
     ...(opts.trusted ? { onPairing: "trusted" as const } : {}),
+    ...(opts.answers ? { answers: opts.answers } : {}),
   }).start()
   settings = tempSettings({
     tvs: [
@@ -52,6 +61,7 @@ async function boot(opts: { power?: "on" | "standby"; wake?: boolean; paired?: b
         wakeEntity: opts.wake === false ? null : "media_player.samsung_the_frame_55",
         wsPort: frame.wsPort,
         restPort: frame.restPort,
+        ackTimeoutMs: 200,
       },
     ],
   })
@@ -132,6 +142,32 @@ describe("pairing with a TV that hands out no token", () => {
   })
 })
 
+describe("2022 Frame that doesn't confirm select and Art Mode", () => {
+  it.each(["silent", "broadcast"] as const)(
+    "finishes the job, shows the work and still cleans up (%s)",
+    async (answers) => {
+      await boot({ answers }) // keepUploads = 3
+      let last: JobDTO | null = null
+      for (const id of ["met:1", "met:2", "rijks:4", "cleveland:5"]) {
+        const r = await api.tvs[":tv"].show.$post({ param: { tv: "woonkamer" }, json: { artworkId: id } })
+        last = await waitJob((await r.json()).id)
+        expect(last.error).toBeNull()
+        expect(last.status).toBe("done")
+      }
+      expect(last!.steps.map((s) => [s.id, s.state])).toEqual([
+        ["download", "done"],
+        ["render", "done"],
+        ["wake", "skipped"],
+        ["show", "done"],
+        ["cleanup", "done"],
+      ])
+      expect(frame.current).toBe([...frame.images.keys()].at(-1))
+      expect(frame.artMode).toBe(true)
+      expect(frame.images.size).toBe(3)
+    },
+  )
+})
+
 describe("one tap", () => {
   it("downloads, renders 3840x2160, uploads, selects and switches Art Mode on", async () => {
     await boot()
@@ -184,13 +220,36 @@ describe("one tap", () => {
     expect(museumHits.filter((u) => u.includes("met:2"))).toHaveLength(1)
   })
 
-  it("falls back from fill to light for a portrait work", async () => {
+  it("fills the screen for a portrait work too (smart crop)", async () => {
     await boot()
     const r = await api.tvs[":tv"].show.$post({
       param: { tv: "woonkamer" },
       json: { artworkId: "met:3", mode: "fill" },
     })
-    expect((await r.json()).mode).toBe("light")
+    const job = await waitJob((await r.json()).id)
+    expect(job).toMatchObject({ status: "done", mode: "fill" })
+    const [img] = [...frame.images.values()]
+    expect(img!.matte).toBe("none")
+    expect((await sharp(img!.data).metadata()).width).toBe(3840)
+  })
+
+  it("uses the TV's display setting when no mode is given, and an override when it is", async () => {
+    await boot()
+    const tvs = await (await api.tvs.$get()).json()
+    expect(tvs[0]).toMatchObject({ display: "fill", matteStyle: "light" })
+    const first = await api.tvs[":tv"].show.$post({ param: { tv: "woonkamer" }, json: { artworkId: "met:1" } })
+    expect((await first.json()).mode).toBe("fill")
+
+    await api.tvs[":tv"].display.$put({ param: { tv: "woonkamer" }, json: { display: "matte", matteStyle: "dark" } })
+    const second = await api.tvs[":tv"].show.$post({ param: { tv: "woonkamer" }, json: { artworkId: "met:2" } })
+    expect((await second.json()).mode).toBe("dark")
+
+    const once = await api.tvs[":tv"].show.$post({
+      param: { tv: "woonkamer" },
+      json: { artworkId: "met:2", mode: "fill" },
+    })
+    expect((await once.json()).mode).toBe("fill")
+    expect((await (await api.tvs.$get()).json())[0]).toMatchObject({ display: "matte", matteStyle: "dark" })
   })
 
   it("keeps only the newest uploads on the TV", async () => {
