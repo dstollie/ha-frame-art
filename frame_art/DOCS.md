@@ -1,41 +1,45 @@
 # Frame Art
 
-Open-access paintings (The Met, the Rijksmuseum and the Cleveland Museum of Art, all CC0) on your Samsung The Frame, with one tap.
+Open-access museum art and your own photos on a Samsung The Frame, with one tap.
+
+> Install the **Frame Art integration** too (HACS → ⋮ → Custom repositories → `https://github.com/dstollie/ha-frame-art`, type _Integration_, then restart HA). It adds the native sidebar panel and the MCP endpoint. Once this add-on runs, HA shows **Frame Art discovered** under Devices & services: press _Configure_. Without the integration, use **Open Web UI**.
 
 ## Using it
 
-- Open **Frame Art** in the sidebar. **Ontdek** shows the catalogue by category, colour and search; **Verras me** picks something at random.
-- On a work, the preview shows how it will look. **Vullen (slim bijsnijden)** fills the whole screen with a crop that keeps the subject in frame; **Passe-partout** (licht, donker, blur) shows the whole work. Each TV has its own default under **Instellingen → Weergave**; on a work you can choose another mode for this one time. Then tap **Zet op woonkamer** or **Zet op slaapkamer**. The add-on downloads the work, renders it to 3840×2160, switches the TV on if needed, uploads it, shows it and switches Art Mode on.
-- **Favorieten** and **Geschiedenis** have their own page. Under **Instellingen** you pair each TV and choose the rotation category.
+- **Explore:** public-domain paintings from the sources you enabled, by category, colour, source or search. **Surprise me** picks one at random.
+- **A work:** the preview shows how it will look on the Frame. **Fill (smart crop)** fills the screen and keeps the subject in view; **Passe-partout** (light, dark or blur) shows the whole work. Each TV has a default (Settings); on a work you can choose differently for this one time. Then **Show on …**.
+- **My collection:** upload images or add them from a URL, and organise them in albums.
+- **History**, favourites, and a rotation category per TV.
 
 ## Pairing (once per TV)
 
-The add-on talks to the Frame's art channel under its own name, **FrameArt**. That needs its own approval on the TV, separate from SamsungTV Smart:
-
 1. Switch the TV on with a normal picture and stand next to it.
-2. Under **Instellingen**, press **Koppelen** for that TV.
-3. On the TV, choose **Toestaan**. You have a minute.
+2. Settings → **Pair** for that TV.
+3. On the TV, choose **Allow** for _FrameArt_. You have a minute.
 
-The token goes into `/data/tokens/<tv>.token` (the add-on's own storage, included in HA backups). The add-on never connects to a TV that hasn't been paired, so it can never pop up a prompt on its own.
+The add-on never connects to a TV that hasn't been paired, so it can't pop up prompts by itself.
 
 ## Options
 
-| Option                                    | Meaning                                                                                                                                                |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tvs`                                     | Per Frame: `name` (also the id, e.g. `woonkamer`), `host` (IP) and optionally `wake_entity`, the `media_player` that switches it on (SamsungTV Smart). |
-| `default_mode`                            | `light`, `dark`, `blur` or `fill`, for rotation and when nothing is chosen.                                                                            |
-| `keep_uploads` / `keep_favourite_uploads` | How many of its own uploads stay on each TV; older ones are deleted.                                                                                   |
-| `cache_mb`                                | Disk cache for downloads and renders (LRU).                                                                                                            |
-| `sync_hour` / `sync_on_start`             | Nightly catalogue refresh.                                                                                                                             |
-| `mqtt`                                    | HA entities through MQTT discovery (needs the Mosquitto add-on).                                                                                       |
+| Option                                    | Meaning                                                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `tvs`                                     | Per Frame: `name` (also the id), `host` (IP) and optionally `wake_entity`, the `media_player` that switches it on (SamsungTV Smart). |
+| `default_mode`                            | Passe-partout style when a TV is set to passe-partout and nothing else is chosen.                                                    |
+| `keep_uploads` / `keep_favourite_uploads` | How many of its own uploads stay on each TV.                                                                                         |
+| `cache_mb`                                | Disk cache for downloads, thumbnails and renders. My collection isn't part of it.                                                    |
+| `sync_hour` / `sync_on_start`             | Nightly catalogue refresh.                                                                                                           |
+| `mqtt`                                    | HA entities through MQTT discovery (needs Mosquitto).                                                                                |
 
-## Home Assistant and Node-RED
+Art sources, API keys and the MCP token are managed in the panel under **Settings**, not here.
 
-With MQTT, each TV gets one device, **Frame Art <name>**, with:
+## Home Assistant entities
 
-- `button.frame_art_<tv>_nieuw`: a new work from the rotation category,
-- `select.frame_art_<tv>_rotatie`: the rotation category (Alles, Favorieten, Impressionisme, …),
-- `sensor.frame_art_<tv>_schilderij`: the current title, with artist, year and museum as attributes,
-- `image.frame_art_<tv>_schilderij`: a thumbnail of what's showing now.
+With MQTT, each TV gets a device **Frame Art <name>**: `button.frame_art_<tv>_nieuw` (a new work from the rotation), `select.frame_art_<tv>_rotatie`, `sensor.frame_art_<tv>_schilderij` and `image.frame_art_<tv>_schilderij`.
 
-For a daily rotation, let Node-RED press `button.frame_art_<tv>_nieuw`.
+## AI assistants (MCP)
+
+Settings → **AI assistants (MCP)** shows the endpoint (`https://<your-ha>/api/frame_art/mcp`, Nabu Casa works too) and the token. For Claude Code:
+
+```
+claude mcp add --transport http frame-art https://<your-ha>/api/frame_art/mcp --header "Authorization: Bearer <token>"
+```
