@@ -71,6 +71,8 @@ export class FrameTV implements TV {
       onToken: (t) => writeFileSync(this.tokenFile, t, { mode: 0o600 }),
       timeoutMs: 20_000,
       pairTimeoutMs: 60_000,
+      ...(this.cfg.ackTimeoutMs ? { ackTimeoutMs: this.cfg.ackTimeoutMs } : {}),
+      onUnmatched: (p) => console.log(`art ${this.id}: unanswered event ${JSON.stringify(p).slice(0, 300)}`),
     })
     try {
       return await fn(client)

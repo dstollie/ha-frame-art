@@ -32,6 +32,7 @@ export interface TVConfig {
   /** Ports are only overridden in tests (fake Frame). */
   wsPort?: number
   restPort?: number
+  ackTimeoutMs?: number
 }
 
 export interface Settings {
