@@ -1,0 +1,21 @@
+knowledge/codebase/06-adr-series-playback.md
+  s_e57963d2c3d792::t_408c17a0b234c2 1-33
+knowledge/codebase/01-index.md
+  s_e57963d2c3d792::t_07a0ffe9a66044 27-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afdb09d3ff571777c149ca16354a9a9d8db2c38a",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
