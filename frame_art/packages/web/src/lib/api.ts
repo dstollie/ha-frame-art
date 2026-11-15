@@ -195,4 +195,34 @@ export const SOURCE_LABEL: Record<ArtworkDTO["source"], string> = {
   cleveland: "Cleveland Museum of Art",
 }
 
-export const MODE_LABEL: Record<Mode, string> = { light: "Licht", dark: "Donker", blur: "Blur", fill: "Vullend" }
+export const MODE_LABEL: Record<Mode, string> = {
+  fill: "Vullen (slim bijsnijden)",
+  light: "Passe-partout licht",
+  dark: "Passe-partout donker",
+  blur: "Passe-partout blur",
+}
+export const MODE_SHORT: Record<Mode, string> = { fill: "Vullen", light: "Licht", dark: "Donker", blur: "Blur" }
+
+export const useCrop = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ["crop", id],
+    enabled,
+    staleTime: Infinity,
+    queryFn: async () => ok(await api.artworks[":id"].crop.$get({ param: { id } })),
+  })
+
+export function useSetDisplay() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      tv,
+      display,
+      matteStyle,
+    }: {
+      tv: string
+      display: "fill" | "matte"
+      matteStyle: "light" | "dark" | "blur"
+    }) => ok(await api.tvs[":tv"].display.$put({ param: { tv }, json: { display, matteStyle } })),
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.tvs }),
+  })
+}

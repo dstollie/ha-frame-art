@@ -4,6 +4,13 @@ import { useState } from "react"
 import type { Mode } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
+/** object-position that puts the crop window in view: 0% = left/top edge, 100% = right/bottom. */
+const axis = (start: number, size: number) => (size >= 1 ? 50 : (start / (1 - size)) * 100)
+
+export function cropPosition(c: { left: number; top: number; width: number; height: number }): string {
+  return `${axis(c.left, c.width).toFixed(1)}% ${axis(c.top, c.height).toFixed(1)}%`
+}
+
 const pct = (v: number, of: number) => `${(v / of) * 100}%`
 const cq = (px: number) => `${(px / W) * 100}cqw`
 
@@ -18,6 +25,7 @@ export function FramePreview({
   className,
   bezel = true,
   alt,
+  crop,
 }: {
   src: string
   aspect: number | null
@@ -25,10 +33,12 @@ export function FramePreview({
   className?: string
   bezel?: boolean
   alt: string
+  /** Where "fill" cuts the work (from the server's attention crop); centred while unknown. */
+  crop?: { left: number; top: number; width: number; height: number } | undefined
 }) {
   const [natural, setNatural] = useState<number | null>(null)
   const ratio = natural ?? aspect ?? 1.4
-  const effective: Mode = mode === "fill" && !(ratio >= 1.5 && ratio <= 2.1) ? "light" : mode
+  const effective: Mode = mode
   // Use a large virtual source so the upscale limit never kicks in for the preview.
   const box = artBox(Math.round(ratio * 10_000), 10_000, effective === "fill" ? "light" : effective)
   const bevel = bevelWidth(W)
@@ -61,6 +71,7 @@ export function FramePreview({
             src={src}
             alt={alt}
             className="art-in absolute inset-0 size-full object-cover"
+            style={{ objectPosition: crop ? cropPosition(crop) : "50% 50%" }}
             onLoad={(e) => setNatural(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
           />
         ) : (

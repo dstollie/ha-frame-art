@@ -3,7 +3,16 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useConfig, usePair, useSetCategory, useStartSync, useSync, useTvs, type TvState } from "@/lib/api"
+import {
+  useConfig,
+  usePair,
+  useSetCategory,
+  useSetDisplay,
+  useStartSync,
+  useSync,
+  useTvs,
+  type TvState,
+} from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 function PairBlock({ tv }: { tv: TvState }) {
@@ -58,6 +67,7 @@ export function SettingsPage() {
   const sync = useSync()
   const startSync = useStartSync()
   const setCategory = useSetCategory()
+  const setDisplay = useSetDisplay()
   const s = sync.data
 
   return (
@@ -88,6 +98,52 @@ export function SettingsPage() {
               </div>
             </div>
             <PairBlock tv={tv} />
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <div>
+                <p className="text-sm">Weergave</p>
+                <p className="text-xs text-muted-foreground">
+                  Vullen snijdt slim bij tot 16:9, zodat het onderwerp in beeld blijft. Per werk kun je het één keer
+                  anders kiezen.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Select
+                  value={tv.display}
+                  onValueChange={(display) =>
+                    setDisplay.mutate({ tv: tv.id, display: display as "fill" | "matte", matteStyle: tv.matteStyle })
+                  }
+                >
+                  <SelectTrigger className="w-56 rounded-full" aria-label={`Weergave ${tv.name}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fill">Vullen (slim bijsnijden)</SelectItem>
+                    <SelectItem value="matte">Passe-partout</SelectItem>
+                  </SelectContent>
+                </Select>
+                {tv.display === "matte" && (
+                  <Select
+                    value={tv.matteStyle}
+                    onValueChange={(matteStyle) =>
+                      setDisplay.mutate({
+                        tv: tv.id,
+                        display: "matte",
+                        matteStyle: matteStyle as "light" | "dark" | "blur",
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-32 rounded-full" aria-label={`Passe-partout ${tv.name}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Licht</SelectItem>
+                      <SelectItem value="dark">Donker</SelectItem>
+                      <SelectItem value="blur">Blur</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <div>
                 <p className="text-sm">Rotatie</p>
