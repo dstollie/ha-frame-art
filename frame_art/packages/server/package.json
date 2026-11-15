@@ -1,0 +1,50 @@
+{
+  "name": "@frame-art/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "types": "./dist/app.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/app.d.ts",
+      "default": "./dist/app.js"
+    },
+    "./api": {
+      "types": "./src/api-types.ts"
+    },
+    "./geometry": {
+      "types": "./src/geometry.ts",
+      "default": "./src/geometry.ts"
+    },
+    "./models": {
+      "types": "./src/models.ts",
+      "default": "./src/models.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "FRAME_ART_DATA=.data tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@frame-art/frame-tv": "workspace:*",
+    "@hono/node-server": "^2.1.8",
+    "@hono/zod-validator": "^0.9.1",
+    "better-sqlite3": "^13.2.0",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.18",
+    "mqtt": "^5.16.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}
