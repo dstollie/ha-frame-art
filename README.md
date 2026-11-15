@@ -15,7 +15,8 @@
 - **One tap** to put it on a TV: the add-on downloads the work, renders an exact 3840×2160 JPEG, switches the TV on if needed, uploads it, shows it and switches Art Mode on. Its own old uploads are cleaned up, so the TV doesn't fill up.
 - **My collection:** upload your own photos or art (files or a URL), organise them in albums, and show them the same way.
 - **Native in Home Assistant:** a sidebar panel that uses HA's own components, theme (light and dark) and language (English, Dutch). Rotation, favourites and history are built in, and every TV gets HA entities for automations.
-- **MCP server:** Claude or another MCP client can search art, upload images and push them to a TV.
+- **Series:** playlists that rotate on one or more TVs, in order or shuffled, with a duration per series and per work. Play, pause, next and stop from the panel, HA entities or MCP.
+- **MCP server:** Claude or another MCP client can search art, upload images, build series and push them to a TV.
 
 ## Install
 
@@ -93,6 +94,12 @@ The add-on is an MCP server (streamable HTTP). Tools:
 | `show_artwork` | Put a work on a TV, with `display: "fill" \| "matte"` and `matte_style: light \| dark \| blur` |
 | `upload_image` | Add an image from a URL or base64 to My collection (optionally into an album) and optionally show it right away |
 | `list_albums` | Albums in My collection |
+| `list_series`, `get_series` | Series with their works, durations and where they play |
+| `create_series` | A series from artwork ids, an album and/or search results, with a duration per work and shuffle |
+| `update_series` | Rename, durations (per series or per work), shuffle, add, remove, reorder |
+| `delete_series` | Delete a series (stops it everywhere) |
+| `play_series` | Play a series on one or more TVs |
+| `control_playback` | Pause, resume, next or stop on a TV |
 
 **Connect:** open Frame Art → **Settings → AI assistants (MCP)**. It shows the endpoint and the token (copy, show, or create a new one). The token controls your Frames; keep it secret.
 
@@ -119,6 +126,7 @@ flowchart LR
 ```
 
 - **The Frame's art API:** the add-on speaks the Frame's art channel (`wss://<tv>:8002/api/v2/channels/com.samsung.art-app`) through its own TypeScript port of [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api): `send_image` → a one-off D2D socket for the JPEG → `select_image` → Art Mode on. Every upload is exactly 3840×2160 with `matte_id: none`; the passe-partout is drawn by the add-on, from the same geometry the preview uses. 2022 firmware doesn't always confirm `select_image` and Art Mode, so those confirmations are optional.
+- **Series:** the add-on keeps the schedule (per TV, in SQLite, so it survives restarts) and each step is a normal job. A work still on the TV is only selected (`get_content_list` + `select_image`), so a looping series doesn't upload again. The TV's own slideshow can't play a subset with per-work durations; see [the ADR](knowledge/codebase/06-adr-series-playback.md).
 - **Pairing:** the TV asks *"Allow FrameArt?"* the first time. Some Frames that already trust the client accept without a token; both count as paired. The add-on never opens the art channel to a TV that isn't paired, so it can't pop up prompts on its own.
 - **Native panel:** the integration registers a custom panel (`embed_iframe: false`) whose module the add-on serves, so UI updates ship with add-on releases. The panel renders in a shadow root, maps all colours to HA's theme variables, and uses HA's own elements (`ha-card`, `ha-button`, `ha-switch`, `ha-alert`) with a styled fallback when HA hasn't loaded one. Why this route: [knowledge/codebase/05-adr-native-panel.md](knowledge/codebase/05-adr-native-panel.md).
 - **Security:** the add-on accepts HA ingress (from the Supervisor's ingress proxy), the integration's internal token (handed over through Supervisor discovery), and on `/mcp` only the MCP token. Settings (including the MCP token) are admin-only in the panel. Tokens are never logged.

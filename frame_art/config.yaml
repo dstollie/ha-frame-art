@@ -1,5 +1,5 @@
 name: Frame Art
-version: "0.2.1"
+version: "0.3.0"
 slug: frame_art
 description: Open-access museum art and your own photos on a Samsung The Frame, with a native panel and MCP.
 url: https://github.com/dstollie/ha-frame-art

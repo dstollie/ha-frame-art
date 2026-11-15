@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- **Series:** playlists of works that rotate on one or more TVs. Make one from a work (**Add to series**, **New series**), from search results or from an album. A **Series** tab and a page per series: reorder by dragging, a duration per series and per work, shuffle, **Play on …**, and now/next with pause, next and stop.
+- Works still on the TV are selected instead of uploaded again, also for **Show on …**. A playing series' current and next work are never cleaned up.
+- HA entities: a series select and next/pause/stop buttons per TV, and a sensor per series.
+- MCP: `list_series`, `get_series`, `create_series`, `update_series`, `delete_series`, `play_series`, `control_playback`.
+
 ## 0.2.1
 
 - Fix: Settings → AI assistants (MCP) showed only `/api/frame_art/mcp`. The endpoint is now an absolute URL, with a choice between Remote (Nabu Casa or your external URL) and Local, taken from Home Assistant's own URL settings. The copy command includes the real token once you reveal it.

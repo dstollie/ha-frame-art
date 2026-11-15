@@ -27,7 +27,20 @@ erDiagram
     text tv PK
     text content_id PK "MY_Fxxxx on the TV"
     text artwork_id
-    integer seq "insert order for pruning"
+    integer seq "insert order for pruning; bumped when re-used"
+    text mode "render mode; null before 0.3.0 (never re-used)"
+  }
+  series {
+    text id PK
+    text name
+    integer duration "seconds per work"
+    integer shuffle
+  }
+  series_items {
+    text series_id PK
+    text artwork_id PK
+    integer position
+    integer duration "own seconds, or null"
   }
   history {
     integer id PK
@@ -50,13 +63,15 @@ erDiagram
     text artwork_id PK
   }
   meta {
-    text key PK "last_sync, category:<tv>"
+    text key PK "last_sync, category:<tv>, display:<tv>, playback:<tv> (JSON)"
     text value
   }
   artworks ||--o| favourites : "is"
   artworks ||--o{ uploads : "uploaded as"
   artworks ||--o{ history : "shown"
   albums ||--o{ album_items : "holds"
+  series ||--o{ series_items : "plays"
+  artworks ||--o{ series_items : "in"
   artworks ||--o{ album_items : "in"
 ```
 

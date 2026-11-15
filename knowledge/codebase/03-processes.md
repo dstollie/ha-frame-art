@@ -75,6 +75,10 @@ sequenceDiagram
 
 `button.frame_art_<tv>_nieuw` → MQTT `frame_art/<tv>/new/set` → `pickNext`: a random work from the TV's rotation category (`select.frame_art_<tv>_rotatie`), landscape-friendly, not among the last 60 shown on that TV → a normal job in `default_mode`.
 
+## Series playback
+
+`POST /series/:id/play` → `Player.play`: per TV an order (shuffled if set), the first work as a job that may wake the TV, and `nextAt`. A timer (`tick`, every 15 s) advances playbacks whose `nextAt` passed: it syncs the order with edits, skips a TV that is off (retry in 60 s, never wakes), and submits the next work as a job with `wake: false`. A job first looks for the same work in the same mode in `uploads` and, when the TV still lists it (`get_content_list`), only selects it. A manual show or "new work" on that TV pauses its series (`hold`). Cleanup never prunes the current and next work of a playback. Why: @knowledge/codebase/06-adr-series-playback.md.
+
 ## MCP
 
 `/mcp` (or `/api/frame_art/mcp` through the integration): stateless streamable HTTP, one `McpServer` per request, JSON responses. The token is the MCP token from Settings (Bearer or `?token=`). `show_artwork` and `upload_image` submit normal jobs and wait for them (max 2 minutes).
