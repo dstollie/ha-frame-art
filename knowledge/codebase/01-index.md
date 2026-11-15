@@ -1,0 +1,30 @@
+# Codebase Index
+
+Foundational knowledge about how Frame Art is put together. Load the file that matches the request.
+
+## Available Guidelines
+
+### Architecture
+**File:** @knowledge/codebase/02-architecture.md
+**Keywords:** architecture, packages, ingress, add-on, hono, rpc, sqlite, docker, ghcr, supervisor, mqtt
+**When to use:** understanding how the add-on, the API, the web app, the TV client and Home Assistant fit together, or where a change belongs
+
+### Processes
+**File:** @knowledge/codebase/03-processes.md
+**Keywords:** job, one tap, upload, wake, pairing, token, sync, catalogue, rotation, release, flow
+**When to use:** changing what happens when someone taps "Zet op …", pairs a TV, presses the MQTT button, or when the catalogue syncs
+
+### Data models
+**File:** @knowledge/codebase/04-data-models.md
+**Keywords:** database, schema, drizzle, table, artworks, uploads, history, favourites, meta, categories
+**When to use:** touching `db.ts`, queries, filters or anything stored in SQLite
+
+## Loading Logic
+
+1. **Primary:** Match keywords from the request
+2. **Secondary:** Match the files being changed (`db.ts` → data models, `jobs.ts`/`tv.ts`/`sync.ts` → processes)
+3. **Tertiary:** Load the architecture file when unsure where something belongs
+
+## Usage
+
+Load the matched files before changing code, and keep them accurate when the code they describe changes.
