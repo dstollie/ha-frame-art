@@ -1,0 +1,39 @@
+.editorconfig
+  s_e57963d2c3d792::t_5ccc704be5ffa4 1-13
+.gitignore
+  s_e57963d2c3d792::t_2df53fcc8260e8 1-19
+frame_art/.dockerignore
+  s_e57963d2c3d792::t_4ac8aa8f679126 1-7
+frame_art/.husky/pre-commit
+  s_e57963d2c3d792::t_51c487311a851e 1
+frame_art/.nvmrc
+  s_e57963d2c3d792::t_1f4ae74e5afdb6 1
+frame_art/.oxfmtrc.json
+  s_e57963d2c3d792::t_02ea9d7ec05e7a 1-17
+frame_art/.oxlintrc.json
+  s_e57963d2c3d792::t_6d6f3d409f5ca5 1-43
+frame_art/package.json
+  s_e57963d2c3d792::t_bee6468f1de284 1-36
+frame_art/pnpm-lock.yaml
+  s_e57963d2c3d792::t_a2cc3f31c8c6b9 1-6386
+frame_art/pnpm-workspace.yaml
+  s_e57963d2c3d792::t_04205874b55cc2 1-6
+frame_art/tsconfig.base.json
+  s_e57963d2c3d792::t_cdcd60feaadddb 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b42c710d9616acc061e0c1f493073d810f7aa3d",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
