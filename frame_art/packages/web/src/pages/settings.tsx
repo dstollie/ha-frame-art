@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Alert, Button, Card, Icon, IconButton, Select, Spinner, Switch, TextField } from "@/components/ha"
 import {
   useConfig,
+  useHaUrls,
   useMcp,
   usePair,
   useRotateMcp,
@@ -17,9 +18,9 @@ import {
   type SourceSetting,
   type TvState,
 } from "@/lib/api"
-import { getEnv } from "@/lib/env"
 import { useLanguage } from "@/lib/hass"
 import { useLocale, useT } from "@/lib/i18n"
+import { claudeCommand, mcpEndpoints, type McpEndpoint } from "@/lib/mcp"
 
 function Row({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
   return (
@@ -203,24 +204,42 @@ function McpCard() {
   const [visible, setVisible] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const mcp = useMcp(true)
+  const urls = useHaUrls()
   const rotate = useRotateMcp()
-  const endpoint =
-    getEnv().mode === "panel"
-      ? `${location.origin}${mcp.data?.path ?? "/api/frame_art/mcp"}`
-      : (mcp.data?.path ?? "/api/frame_art/mcp")
+  const endpoints = mcpEndpoints(urls.data, location.origin, mcp.data?.path)
+  const [picked, setPicked] = useState<string | null>(null)
+  const endpoint = endpoints.find((e) => e.url === picked)?.url ?? endpoints[0]?.url ?? ""
+  const token = mcp.data?.token ?? ""
   const copy = async (what: string, value: string) => {
     await navigator.clipboard.writeText(value)
     setCopied(what)
     setTimeout(() => setCopied(null), 1500)
   }
-  const token = mcp.data?.token ?? ""
-  const example = `claude mcp add --transport http frame-art ${endpoint} --header "Authorization: Bearer ${visible ? token : "<token>"}"`
+  const label = (e: McpEndpoint) =>
+    e.label === "remote"
+      ? e.cloud
+        ? t.endpointCloud
+        : t.endpointRemote
+      : e.label === "local"
+        ? t.endpointLocal
+        : t.endpointBrowser
+  const command = claudeCommand(endpoint, visible && token ? token : null)
 
   return (
-    <Card header={t.mcp}>
+    <Card header={t.mcp} label={t.mcp}>
       <p className="px-4 text-sm text-text2">{t.mcpHelp}</p>
       <Row title={t.endpoint}>
-        <code className="rounded bg-bg2 px-2 py-1 text-xs break-all">{endpoint}</code>
+        {endpoints.length > 1 && (
+          <Select
+            label={t.endpoint}
+            value={endpoint}
+            onChange={setPicked}
+            options={endpoints.map((e) => ({ value: e.url, label: label(e) }))}
+          />
+        )}
+        <code className="rounded bg-bg2 px-2 py-1 text-xs break-all" data-testid="mcp-endpoint">
+          {endpoint}
+        </code>
         <IconButton
           path={copied === "endpoint" ? mdiCheck : mdiContentCopy}
           label={t.copy}
@@ -240,9 +259,17 @@ function McpCard() {
           {t.rotate}
         </Button>
       </Row>
-      <div className="border-t border-divider px-4 py-3">
-        <pre className="overflow-x-auto rounded bg-bg2 p-3 text-xs">{example}</pre>
+      <div className="flex items-start gap-2 border-t border-divider px-4 py-3">
+        <pre className="flex-1 overflow-x-auto rounded bg-bg2 p-3 text-xs" data-testid="mcp-command">
+          {command}
+        </pre>
+        <IconButton
+          path={copied === "command" ? mdiCheck : mdiContentCopy}
+          label={t.copy}
+          onClick={() => void copy("command", command)}
+        />
       </div>
+      {!visible && <p className="px-4 pb-3 text-xs text-text2">{t.commandTokenHint}</p>}
     </Card>
   )
 }

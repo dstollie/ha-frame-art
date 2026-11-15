@@ -226,6 +226,15 @@ ingress.get("/api/frame_art/panel.js", (c) => {
   url.pathname = "/panel/frame-art-panel.js"
   return app.fetch(new Request(url, c.req.raw))
 })
+// What the integration's /api/frame_art/urls returns on a Nabu Casa set-up.
+ingress.get("/api/frame_art/urls", (c) =>
+  c.json({
+    external: "https://example.ui.nabu.casa",
+    external_is_cloud: true,
+    internal: base,
+    mcp_path: "/api/frame_art/mcp",
+  }),
+)
 ingress.get("/frame-art/*", (c) => {
   const dark = c.req.query("theme") === "dark"
   const lang = c.req.query("lang") === "nl" ? "nl" : "en"

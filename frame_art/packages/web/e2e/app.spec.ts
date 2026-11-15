@@ -135,3 +135,22 @@ test("phone: HA menu button and tabs", async ({ page }, info) => {
   await page.getByRole("link", { name: "History" }).click()
   await expect(page).toHaveURL(/\/frame-art\/history/)
 })
+
+test("MCP: absolute endpoints (Nabu Casa first, local selectable) and the token only when revealed", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "settings run once")
+  await page.goto("/frame-art/settings")
+  const endpoint = page.getByTestId("mcp-endpoint")
+  await expect(endpoint).toHaveText("https://example.ui.nabu.casa/api/frame_art/mcp")
+  const command = page.getByTestId("mcp-command")
+  await expect(command).toContainText("frame-art https://example.ui.nabu.casa/api/frame_art/mcp")
+  await expect(command).toContainText("Bearer <token>")
+
+  await page.getByRole("combobox", { name: "Endpoint" }).selectOption({ label: "Local" })
+  await expect(endpoint).toHaveText(/^http:\/\/localhost:\d+\/api\/frame_art\/mcp$/)
+
+  const { token } = (await (await page.request.get("/api/frame_art/api/settings/mcp")).json()) as { token: string }
+  await page.getByRole("button", { name: "Show" }).click()
+  await expect(command).toContainText(`Bearer ${token}`)
+})

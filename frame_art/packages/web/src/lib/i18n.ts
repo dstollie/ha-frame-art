@@ -89,6 +89,11 @@ const en = {
   mcpHelp:
     "Connect Claude or another MCP client to search art, upload images and put them on a TV. Keep the token secret: it controls your Frames.",
   endpoint: "Endpoint",
+  endpointCloud: "Remote (Nabu Casa)",
+  endpointRemote: "Remote",
+  endpointLocal: "Local",
+  endpointBrowser: "This browser",
+  commandTokenHint: "Reveal the token to put it in the command, or replace <token> yourself.",
   token: "Token",
   show: "Show",
   copy: "Copy",
@@ -205,6 +210,11 @@ const nl: Strings = {
   mcpHelp:
     "Koppel Claude of een andere MCP-client om kunst te zoeken, afbeeldingen te uploaden en op een TV te zetten. Houd het token geheim: het bestuurt je Frames.",
   show: "Toon",
+  endpointCloud: "Op afstand (Nabu Casa)",
+  endpointRemote: "Op afstand",
+  endpointLocal: "Lokaal",
+  endpointBrowser: "Deze browser",
+  commandTokenHint: "Toon het token om het in het commando te zetten, of vervang <token> zelf.",
   copy: "Kopieer",
   copied: "Gekopieerd",
   rotate: "Nieuw token",

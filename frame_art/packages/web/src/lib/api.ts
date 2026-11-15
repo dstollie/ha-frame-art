@@ -4,6 +4,10 @@ import { hc, type InferResponseType } from "hono/client"
 import { useEffect, useState } from "react"
 
 import { apiFetch, apiUrl, getEnv } from "./env"
+import { getHass } from "./hass"
+import type { HaUrls } from "./mcp"
+
+export type { HaUrls } from "./mcp"
 
 export type { ArtworkDTO, JobDTO, Mode }
 
@@ -266,6 +270,24 @@ export function useSetSource() {
     },
   })
 }
+
+/**
+ * Where this HA is reachable (from the Frame Art integration). Uses hass.fetchWithAuth when we have
+ * a hass object (panel, or the ingress page inside HA); null when the integration isn't installed.
+ */
+export const useHaUrls = () =>
+  useQuery({
+    queryKey: ["ha-urls"],
+    staleTime: 300_000,
+    retry: false,
+    queryFn: async (): Promise<HaUrls | null> => {
+      const hass = getHass()
+      const r = hass?.fetchWithAuth
+        ? await hass.fetchWithAuth("/api/frame_art/urls")
+        : await fetch("/api/frame_art/urls")
+      return r.ok ? ((await r.json()) as HaUrls) : null
+    },
+  })
 
 export const useMcp = (enabled: boolean) =>
   useQuery({ queryKey: keys.mcp, enabled, queryFn: async () => ok(await api().settings.mcp.$get()) })

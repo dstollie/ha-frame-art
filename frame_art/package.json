@@ -11,7 +11,7 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "test": "pnpm --filter @frame-art/frame-tv build && pnpm --filter @frame-art/frame-tv test && pnpm --filter @frame-art/server test",
+    "test": "pnpm --filter @frame-art/frame-tv build && pnpm --filter @frame-art/frame-tv test && pnpm --filter @frame-art/server test && pnpm --filter web test",
     "test:e2e": "pnpm --filter web build && pnpm --filter web e2e",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:e2e",
     "dev:stack": "pnpm --filter web build && pnpm --filter @frame-art/server exec tsx scripts/dev-stack.ts --seed live --port 8123",
