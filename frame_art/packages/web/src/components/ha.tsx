@@ -115,7 +115,7 @@ export function Button({
       title={title}
       style={{ ["--btn" as string]: colour }}
       className={cn(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40",
+        "inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40",
         appearance === "accent" && "bg-[var(--btn)] text-on-primary hover:brightness-110",
         appearance === "filled" && "bg-[color-mix(in_srgb,var(--btn)_16%,transparent)] text-[var(--btn)]",
         appearance === "outlined" &&
