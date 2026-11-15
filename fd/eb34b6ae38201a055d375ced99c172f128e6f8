@@ -1,0 +1,88 @@
+frame_art/packages/server/src/sources/rijks.ts
+  s_e57963d2c3d792::t_7a79457985ab53 2-140,142
+  s_e57963d2c3d792::t_f4837dc437d36e 1
+  s_e57963d2c3d792::t_2ddf9f5b86ea84 141
+  s_e57963d2c3d792::t_eafe02d80c8120 143
+frame_art/packages/server/package.json
+  s_e57963d2c3d792::t_aae1d74fc926ed 1-50
+frame_art/packages/server/scripts/dev-stack.ts
+  s_e57963d2c3d792::t_06417abb39b868 1-207
+frame_art/packages/server/src/api-types.ts
+  s_e57963d2c3d792::t_c5f5bb697bfc7a 1-5
+frame_art/packages/server/src/app.ts
+  s_e57963d2c3d792::t_b39c70548d40b6 1-288
+frame_art/packages/server/src/categorize.ts
+  s_e57963d2c3d792::t_fe6bb1308de2d9 1-290
+frame_art/packages/server/src/config.ts
+  s_e57963d2c3d792::t_71f638c4c1c7e4 1-88
+frame_art/packages/server/src/db.ts
+  s_e57963d2c3d792::t_80a368cd035dbe 1-395
+frame_art/packages/server/src/geometry.ts
+  s_e57963d2c3d792::t_27295fa8cedc95 1-45
+frame_art/packages/server/src/ha.ts
+  s_e57963d2c3d792::t_816c6c3a2989d9 1-58
+frame_art/packages/server/src/images.ts
+  s_e57963d2c3d792::t_e6cbf3a7e53ffb 1-76
+frame_art/packages/server/src/jobs.ts
+  s_e57963d2c3d792::t_3fb889a13b4b24 1-182
+frame_art/packages/server/src/main.ts
+  s_e57963d2c3d792::t_ab43feb289b0d0 1-54
+frame_art/packages/server/src/models.ts
+  s_e57963d2c3d792::t_faa44e0584aca7 1-98
+frame_art/packages/server/src/mqtt.ts
+  s_e57963d2c3d792::t_45d37b24a2f651 1-165
+frame_art/packages/server/src/render.ts
+  s_e57963d2c3d792::t_18525013593d1d 1-220
+frame_art/packages/server/src/sources/cleveland.ts
+  s_e57963d2c3d792::t_3531d8c4664c06 1-85
+frame_art/packages/server/src/sources/index.ts
+  s_e57963d2c3d792::t_7ad9a759f50c54 1-14
+frame_art/packages/server/src/sources/met.ts
+  s_e57963d2c3d792::t_da6682e8931efc 1-107
+frame_art/packages/server/src/sync.ts
+  s_e57963d2c3d792::t_d6b0058e44763c 1-127
+frame_art/packages/server/src/tv.ts
+  s_e57963d2c3d792::t_9a9b9ed45aff32 1-94
+frame_art/packages/server/test/categorize.test.ts
+  s_e57963d2c3d792::t_be53abc4ac8860 1-63
+frame_art/packages/server/test/db.test.ts
+  s_e57963d2c3d792::t_dc85c6b662a3ba 1-83
+frame_art/packages/server/test/e2e.test.ts
+  s_e57963d2c3d792::t_48dc35e05d13c3 1-269
+frame_art/packages/server/test/fixtures/cma_page.json
+  s_e57963d2c3d792::t_02585a8926b794 1
+frame_art/packages/server/test/fixtures/met_object.json
+  s_e57963d2c3d792::t_327adf73d7da31 1
+frame_art/packages/server/test/fixtures/rk_object.json
+  s_e57963d2c3d792::t_43e6388b682bef 1-2661
+frame_art/packages/server/test/fixtures/rk_search.json
+  s_e57963d2c3d792::t_25c1e61465a834 1
+frame_art/packages/server/test/helpers.ts
+  s_e57963d2c3d792::t_969e890c6e69b6 1-71
+frame_art/packages/server/test/mqtt.test.ts
+  s_e57963d2c3d792::t_89659606606d78 1-33
+frame_art/packages/server/test/render.test.ts
+  s_e57963d2c3d792::t_37520a0a40654e 1-145
+frame_art/packages/server/test/sources.test.ts
+  s_e57963d2c3d792::t_c420f3679ed819 1-75
+frame_art/packages/server/tsconfig.json
+  s_e57963d2c3d792::t_41b825c127c28d 1-5
+frame_art/packages/server/vitest.config.ts
+  s_e57963d2c3d792::t_1368f430eff9da 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdeb34b6ae38201a055d375ced99c172f128e6f8",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
