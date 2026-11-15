@@ -1,3 +1,4 @@
+import { hostname } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -14,12 +15,17 @@ const tvs = new Map<string, TV>(settings.tvs.map((t) => [t.id, new FrameTV(t, pa
 const ha = new SupervisorHA(settings.supervisorToken)
 const staticDir =
   process.env.FRAME_ART_STATIC ?? path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public")
-const { app, svc } = createApp({ settings, tvs, ha, staticDir })
+const { app, svc } = createApp({ settings, tvs, ha, staticDir, auth: "addon" })
 
 const port = Number(process.env.PORT ?? 8099)
 serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, () => {
   console.log(`Frame Art on :${port}, ${settings.tvs.length} TV(s), catalogue ${svc.store.count()} works`)
 })
+
+// Supervisor discovery: the Frame Art integration picks this up and sets itself up with the internal token.
+void ha
+  .discover("frame_art", { host: hostname(), port, token: svc.tokens.internal })
+  .then((ok) => console.log(ok ? "Announced to Home Assistant (discovery)" : "Discovery not available"))
 
 void svc.syncer.loop(settings.syncHour, settings.syncOnStart).catch((e) => console.error("sync loop", e))
 

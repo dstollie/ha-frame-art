@@ -18,8 +18,8 @@ import { createApp } from "../src/app.js"
 import { ensureDirs, paths, type Settings } from "../src/config.js"
 import type { HomeAssistant } from "../src/ha.js"
 import { newArtwork, type Artwork } from "../src/models.js"
-import * as cleveland from "../src/sources/cleveland.js"
-import * as rijks from "../src/sources/rijks.js"
+import * as cleveland from "../src/providers/cleveland.js"
+import * as rijks from "../src/providers/rijks.js"
 import { FrameTV, type TV } from "../src/tv.js"
 
 const args = new Map(process.argv.slice(2).map((a, i, all) => [a, all[i + 1] ?? "true"]))

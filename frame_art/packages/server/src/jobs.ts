@@ -166,12 +166,15 @@ export class JobRunner {
   }
 
   /** Rotation: a landscape-friendly work from the category, not shown on this TV recently. */
-  pickNext(tv: string, category: string): Artwork | null {
-    const favourites = category === "favorieten"
+  pickNext(tv: string, category: string, sources?: string[]): Artwork | null {
+    const favourites = category === "favourites"
+    const own = category === "collection"
     const q = {
-      category: favourites || category === "alles" ? null : category,
+      category: favourites || own || category === "all" ? null : category,
       favourites,
-      landscape: !favourites,
+      // Own uploads and favourites were chosen on purpose; don't filter them on shape.
+      landscape: !favourites && !own,
+      sources: favourites ? undefined : sources,
     }
     return this.store.random(q, this.store.recentIds(tv, 60)) ?? this.store.random(q)
   }

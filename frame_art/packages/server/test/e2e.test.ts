@@ -299,11 +299,11 @@ describe("browse, favourites, rotation", () => {
     const all = await (await api.artworks.$get({ query: { landscape: "1" } })).json()
     expect(all.total).toBe(4)
     expect(all.items.every((a) => (a.aspect ?? 0) >= 1.2)).toBe(true)
-    const golden = await (await api.artworks.$get({ query: { category: "gouden-eeuw" } })).json()
+    const golden = await (await api.artworks.$get({ query: { category: "old-masters" } })).json()
     expect(golden.items.map((a) => a.id)).toEqual(["rijks:4"])
     const cfg = await (await api.config.$get()).json()
     expect(cfg.frame).toMatchObject({ width: 3840, height: 2160 })
-    expect(cfg.categories.find((c) => c.id === "zee")!.count).toBe(1)
+    expect(cfg.categories.find((c) => c.id === "sea")!.count).toBe(1)
     expect(cfg.tvs).toEqual([{ id: "woonkamer", name: "Woonkamer" }])
   })
 
@@ -315,7 +315,7 @@ describe("browse, favourites, rotation", () => {
     const detail = await (await api.artworks[":id"].$get({ param: { id: "cleveland:5" } })).json()
     expect(detail.favourite).toBe(true)
 
-    await api.tvs[":tv"].category.$put({ param: { tv: "woonkamer" }, json: { category: "favorieten" } })
+    await api.tvs[":tv"].category.$put({ param: { tv: "woonkamer" }, json: { category: "favourites" } })
     const r = await api.tvs[":tv"].next.$post({ param: { tv: "woonkamer" } })
     const job = await waitJob((await r.json()).id)
     expect(job).toMatchObject({ status: "done", artworkId: "cleveland:5" })
@@ -332,8 +332,8 @@ describe("browse, favourites, rotation", () => {
         categoryOf: svc.categoryOf,
       },
     )
-    await bridge.onMessage("frame_art/woonkamer/category/set", "Zee & water")
-    expect(svc.categoryOf("woonkamer")).toBe("zee")
+    await bridge.onMessage("frame_art/woonkamer/category/set", "Sea & water")
+    expect(svc.categoryOf("woonkamer")).toBe("sea")
     await bridge.onMessage("frame_art/woonkamer/new/set", "PRESS")
     await svc.runner.idle()
     expect(svc.runner.latest("woonkamer")).toMatchObject({ status: "done", artworkId: "cleveland:5" })

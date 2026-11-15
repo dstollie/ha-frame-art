@@ -11,6 +11,8 @@ export interface HomeAssistant {
   readonly available: boolean
   callService(domain: string, service: string, data: Record<string, unknown>): Promise<boolean>
   mqttService(): Promise<MqttConn | null>
+  /** Announce the add-on to HA (Supervisor discovery) so the integration can set itself up. */
+  discover(service: string, config: Record<string, unknown>): Promise<boolean>
 }
 
 export class SupervisorHA implements HomeAssistant {
@@ -53,6 +55,21 @@ export class SupervisorHA implements HomeAssistant {
       return ((await r.json()) as { data?: MqttConn }).data ?? null
     } catch {
       return null
+    }
+  }
+
+  async discover(service: string, config: Record<string, unknown>) {
+    if (!this.token) return false
+    try {
+      const r = await fetch(`${this.base}/discovery`, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({ service, config }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      return r.ok
+    } catch {
+      return false
     }
   }
 }
