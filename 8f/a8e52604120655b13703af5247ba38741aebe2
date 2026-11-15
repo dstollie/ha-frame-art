@@ -1,0 +1,25 @@
+frame_art/packages/web/src/components/frame-preview.tsx
+  s_e57963d2c3d792::t_087c5c184920a2 7-13,28,36-37,41,74
+frame_art/packages/web/src/lib/api.ts
+  s_e57963d2c3d792::t_6197b151f3182c 198-228
+frame_art/packages/web/src/pages/artwork.tsx
+  s_e57963d2c3d792::t_f395ef5a260970 12,14,16,19,22,26,35-39,67,72-73,104,110,117,128
+frame_art/packages/web/src/pages/settings.tsx
+  s_e57963d2c3d792::t_d0895ef7b3a6f7 6-15,70,101-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fa8e52604120655b13703af5247ba38741aebe2",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
