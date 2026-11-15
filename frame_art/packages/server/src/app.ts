@@ -686,6 +686,9 @@ export function createApp(deps: Deps) {
     }
   }
 
+  // The Supervisor watchdog polls this without credentials; it must not reveal anything.
+  app.get("/healthz", (c) => c.json({ ok: true }))
+
   app.use("/api/*", async (c, next) => {
     if (deps.auth === "open") return next()
     if (c.req.header("x-ingress-path") && remote(c) === INGRESS_PROXY) return next()

@@ -2,7 +2,7 @@
  * The add-on as HA and an AI client see it: auth on /api and /mcp, My collection and albums,
  * and the MCP tools end to end against a fake Frame (real FrameTV, real sharp, real MCP client).
  */
-import { existsSync, readdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 
 import { FakeFrame } from "@frame-art/frame-tv/fake"
@@ -78,6 +78,16 @@ describe("auth", () => {
     expect((await app.request("/api/tvs", { headers: { Authorization: "Bearer nope" } })).status).toBe(401)
     // X-Ingress-Path alone is not enough: it must come from the Supervisor's ingress proxy.
     expect((await app.request("/api/tvs", { headers: { "X-Ingress-Path": "/api/hassio_ingress/x" } })).status).toBe(401)
+  })
+
+  it("answers the Supervisor watchdog without auth, and gives nothing away there", async () => {
+    await boot()
+    const r = await app.request("/healthz")
+    expect(r.status).toBe(200)
+    expect(await r.json()).toEqual({ ok: true })
+    // The watchdog in config.yaml must point at it: anything under /api needs auth.
+    const yaml = readFileSync(path.join(import.meta.dirname, "../../../config.yaml"), "utf8")
+    expect(yaml).toMatch(/^watchdog: http:\/\/\[HOST\]:\[PORT:8099\]\/healthz$/m)
   })
 
   it("allows HA ingress and the integration's internal token", async () => {
