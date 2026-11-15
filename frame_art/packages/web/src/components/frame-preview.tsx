@@ -1,8 +1,8 @@
 import { H, LAYOUT, W, artBox, bevelWidth } from "@frame-art/server/geometry"
 import { useState } from "react"
 
+import { cn } from "@/components/ha"
 import type { Mode } from "@/lib/api"
-import { cn } from "@/lib/utils"
 
 /** object-position that puts the crop window in view: 0% = left/top edge, 100% = right/bottom. */
 const axis = (start: number, size: number) => (size >= 1 ? 50 : (start / (1 - size)) * 100)
@@ -49,7 +49,7 @@ export function FramePreview({
       className={cn(
         "relative w-full [container-type:inline-size]",
         bezel &&
-          "rounded-[0.6cqw] bg-gradient-to-b from-[#2a2724] to-[#141210] p-[1.1cqw] shadow-[0_2.5cqw_6cqw_-1.5cqw_rgb(0_0_0/0.7),inset_0_0_0_1px_rgb(255_255_255/0.06)]",
+          "rounded-[0.6cqw] bg-gradient-to-b from-[#2a2724] to-[#141210] p-[1.1cqw] shadow-[0_1cqw_3cqw_-1cqw_rgb(0_0_0/0.45)]",
         className,
       )}
     >

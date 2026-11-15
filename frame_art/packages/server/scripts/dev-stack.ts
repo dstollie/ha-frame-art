@@ -71,6 +71,9 @@ const ha: HomeAssistant = {
   async mqttService() {
     return null
   },
+  async discover() {
+    return false
+  },
 }
 
 // Fake museum: generated paintings, so tests never depend on the internet.
@@ -114,6 +117,7 @@ const { app, svc } = createApp({
   ha,
   fetchFn,
   staticDir,
+  auth: "open",
 })
 
 async function seed() {
@@ -201,7 +205,46 @@ ingress.all(`${PREFIX}/*`, (c) => {
   return app.fetch(new Request(url, c.req.raw))
 })
 ingress.get(PREFIX, (c) => c.redirect(`${PREFIX}/`))
-ingress.get("/", (c) => c.redirect(`${PREFIX}/`))
+
+// Fake Home Assistant: the panel as HA loads it (custom panel at /frame-art), with the integration's
+// proxy paths. ?theme=dark switches HA's dark theme variables, ?lang=nl the language.
+const HA_DARK = `--primary-background-color:#111111;--secondary-background-color:#202020;--card-background-color:#1c1c1c;
+  --primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b;--divider-color:rgba(225,225,225,.12);
+  --app-header-background-color:#111111;--app-header-text-color:#e1e1e1;--primary-color:#03a9f4;`
+ingress.all("/api/frame_art/api/*", (c) => {
+  const url = new URL(c.req.url)
+  url.pathname = url.pathname.replace("/api/frame_art/api", "/api")
+  return app.fetch(new Request(url, c.req.raw))
+})
+ingress.all("/api/frame_art/mcp", (c) => {
+  const url = new URL(c.req.url)
+  url.pathname = "/mcp"
+  return app.fetch(new Request(url, c.req.raw))
+})
+ingress.get("/api/frame_art/panel.js", (c) => {
+  const url = new URL(c.req.url)
+  url.pathname = "/panel/frame-art-panel.js"
+  return app.fetch(new Request(url, c.req.raw))
+})
+ingress.get("/frame-art/*", (c) => {
+  const dark = c.req.query("theme") === "dark"
+  const lang = c.req.query("lang") === "nl" ? "nl" : "en"
+  return c.html(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Assistant (dev)</title>
+<style>:root{font-family:Roboto,"Noto Sans",sans-serif;${dark ? HA_DARK : ""}} body{margin:0;background:var(--primary-background-color,#fafafa)}</style>
+<script type="module" src="/api/frame_art/panel.js"></script></head><body>
+<script>
+  const el = document.createElement("frame-art-panel")
+  el.panel = { url_path: "frame-art" }
+  el.narrow = innerWidth < 870
+  el.hass = { language: "${lang}", locale: { language: "${lang}" }, themes: { darkMode: ${dark} }, user: { is_admin: true },
+    fetchWithAuth: (path, init) => fetch(path, init) }
+  addEventListener("resize", () => (el.narrow = innerWidth < 870))
+  document.body.append(el)
+</script></body></html>`)
+})
+ingress.get("/frame-art", (c) => c.redirect("/frame-art/"))
+ingress.get("/", (c) => c.redirect("/frame-art/"))
 
 serve({ fetch: ingress.fetch, port }, () => {
   console.log(`dev stack: ${base}${PREFIX}/  (data ${dataDir}, seed ${seedMode}, catalogue ${svc.store.count()})`)

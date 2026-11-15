@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Frame Art</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--primary-background-color, #fafafa);
+      }
+      frame-art-panel {
+        display: block;
+        min-height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Ingress page: the same panel, outside HA's own UI. Theme and language come from the HA page around it. -->
+    <frame-art-panel standalone></frame-art-panel>
+    <script type="module" src="./panel/frame-art-panel.js"></script>
+  </body>
+</html>

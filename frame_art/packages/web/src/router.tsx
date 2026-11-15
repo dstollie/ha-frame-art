@@ -1,36 +1,51 @@
-import { createHashHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router"
+import {
+  createBrowserHistory,
+  createHashHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router"
 
-import { AppShell } from "@/components/app-shell"
+import { Shell } from "@/components/shell"
 import type { Mode } from "@/lib/api"
 import { ArtworkPage } from "@/pages/artwork"
-import { DiscoverPage } from "@/pages/discover"
-import { FavouritesPage } from "@/pages/favourites"
+import { CollectionPage } from "@/pages/collection"
+import { ExplorePage } from "@/pages/explore"
 import { HistoryPage } from "@/pages/history"
 import { SettingsPage } from "@/pages/settings"
 
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined)
 const MODES = new Set(["light", "dark", "blur", "fill"])
 
-const rootRoute = createRootRoute({ component: AppShell })
+const rootRoute = createRootRoute({ component: Shell })
 
-const discoverRoute = createRoute({
+const exploreRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  validateSearch: (s: Record<string, unknown>): { cat?: string; color?: string; q?: string; all?: boolean } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): {
+    cat?: string | undefined
+    color?: string | undefined
+    q?: string | undefined
+    source?: string | undefined
+    all?: boolean | undefined
+  } => ({
     cat: str(s.cat),
     color: str(s.color),
     q: str(s.q),
+    source: str(s.source),
     all: s.all === true || s.all === "true" ? true : undefined,
   }),
-  component: function Discover() {
-    return <DiscoverPage filters={discoverRoute.useSearch()} />
+  component: function Explore() {
+    return <ExplorePage filters={exploreRoute.useSearch()} />
   },
 })
 
 const artworkRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/werk/$id",
-  validateSearch: (s: Record<string, unknown>): { mode?: Mode } => ({
+  path: "/art/$id",
+  validateSearch: (s: Record<string, unknown>): { mode?: Mode | undefined } => ({
     mode: MODES.has(String(s.mode)) ? (s.mode as Mode) : undefined,
   }),
   component: function Artwork() {
@@ -40,23 +55,33 @@ const artworkRoute = createRoute({
   },
 })
 
-const favouritesRoute = createRoute({ getParentRoute: () => rootRoute, path: "/favorieten", component: FavouritesPage })
-const historyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/geschiedenis", component: HistoryPage })
-const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/instellingen", component: SettingsPage })
-
-const routeTree = rootRoute.addChildren([discoverRoute, artworkRoute, favouritesRoute, historyRoute, settingsRoute])
-
-/** Hash history: every view has its own URL, and nothing depends on the ingress base path. */
-export const router = createRouter({
-  routeTree,
-  history: createHashHistory(),
-  defaultViewTransition: true,
-  scrollRestoration: true,
-  defaultPreload: "intent",
+const collectionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/collection",
+  validateSearch: (s: Record<string, unknown>): { album?: string | undefined } => ({ album: str(s.album) }),
+  component: function Collection() {
+    return <CollectionPage album={collectionRoute.useSearch().album} />
+  },
 })
+
+const historyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/history", component: HistoryPage })
+const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage })
+
+const routeTree = rootRoute.addChildren([exploreRoute, artworkRoute, collectionRoute, historyRoute, settingsRoute])
+
+/** Browser history under the panel's URL inside HA; hash history on the ingress page. */
+export function createAppRouter(history: "browser" | "hash", basepath: string) {
+  return createRouter({
+    routeTree,
+    basepath,
+    history: history === "hash" ? createHashHistory() : createBrowserHistory(),
+    scrollRestoration: true,
+    defaultPreload: "intent",
+  })
+}
 
 declare module "@tanstack/react-router" {
   interface Register {
-    router: typeof router
+    router: ReturnType<typeof createAppRouter>
   }
 }

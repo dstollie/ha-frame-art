@@ -1,196 +1,251 @@
+import {
+  mdiArrowLeft,
+  mdiDelete,
+  mdiDiceMultipleOutline,
+  mdiEyeOff,
+  mdiHeart,
+  mdiHeartOutline,
+  mdiOpenInNew,
+  mdiPencil,
+} from "@mdi/js"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, EyeOff, ExternalLink, Heart, Sparkles } from "lucide-react"
-import { toast } from "sonner"
+import { useState } from "react"
 
 import { FramePreview } from "@/components/frame-preview"
-import { SendPanel } from "@/components/send-panel"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Alert, Button, Card, Chip, Icon, IconButton, Segmented, TextField } from "@/components/ha"
+import { ShowButtons } from "@/components/tv-actions"
 import {
-  type Mode,
-  MODE_LABEL,
-  MODE_SHORT,
   randomArtwork,
-  SOURCE_LABEL,
+  useAlbumMutations,
+  useAlbums,
   useArtwork,
   useConfig,
   useCrop,
+  useDeleteArtwork,
   useFavourite,
   useHide,
+  useRenameArtwork,
+  useThumb,
   useTvs,
+  type Mode,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
-
-const MODES: Mode[] = ["fill", "light", "dark", "blur"]
+import { useLanguage } from "@/lib/hass"
+import { useLocale, useT } from "@/lib/i18n"
 
 export function ArtworkPage({ id, mode: wanted }: { id: string; mode: Mode | undefined }) {
+  const t = useT()
+  const lang = useLanguage()
+  const locale = useLocale()
   const art = useArtwork(id)
   const config = useConfig()
+  const tvs = useTvs()
+  const albums = useAlbums()
+  const albumOps = useAlbumMutations()
   const fav = useFavourite()
   const hide = useHide()
+  const del = useDeleteArtwork()
+  const rename = useRenameArtwork()
   const navigate = useNavigate()
   const router = useRouter()
-  const tvs = useTvs()
+  const [editing, setEditing] = useState<string | null>(null)
+  const a = art.data
+  const src = useThumb(a)
+
   const first = tvs.data?.[0]
   const tvDefault: Mode | undefined = first ? (first.display === "fill" ? "fill" : first.matteStyle) : undefined
   const mode: Mode = wanted ?? tvDefault ?? "fill"
+  const display = mode === "fill" ? "fill" : "matte"
   const crop = useCrop(id, mode === "fill")
-  const label = (c: string) => config.data?.categories.find((x) => x.id === c)?.label ?? c
+  const setMode = (m: Mode) =>
+    void navigate({ to: "/art/$id", params: { id }, search: { mode: m }, replace: true, resetScroll: false })
+  const label = (c: string) => config.data?.categories.find((x) => x.id === c)?.label[lang] ?? c
+  const tvName = (tv: string) => config.data?.tvs.find((x) => x.id === tv)?.name ?? tv
 
   if (art.isError) {
     return (
-      <div className="py-20 text-center text-muted-foreground">
-        Dit werk bestaat niet (meer).{" "}
-        <Link to="/" className="text-primary">
-          Terug naar ontdekken
+      <Alert type="warning">
+        {art.error.message}{" "}
+        <Link to="/" className="text-primary underline">
+          {t.back}
         </Link>
-      </div>
+      </Alert>
     )
   }
-  const a = art.data
-  const setMode = (m: Mode) =>
-    void navigate({ to: "/werk/$id", params: { id }, search: { mode: m }, replace: true, resetScroll: false })
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_440px]">
-      <div className="space-y-4">
-        <button
-          onClick={() => (router.history.length > 1 ? router.history.back() : void navigate({ to: "/" }))}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Terug
-        </button>
-        <div className="lg:sticky lg:top-24">
-          {a ? (
-            <FramePreview src={a.thumb} aspect={a.aspect} mode={mode} alt={a.title} crop={crop.data} />
+    <div className="space-y-4">
+      <button
+        type="button"
+        onClick={() => (router.history.length > 1 ? router.history.back() : void navigate({ to: "/" }))}
+        className="inline-flex items-center gap-1 text-sm text-text2 hover:text-text"
+      >
+        <Icon path={mdiArrowLeft} size={18} /> {t.back}
+      </button>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
+        <Card className="self-start p-4 lg:sticky lg:top-32">
+          {src && a ? (
+            <FramePreview src={src} aspect={a.aspect} mode={mode} alt={a.title} crop={crop.data} />
           ) : (
-            <Skeleton className="aspect-video w-full rounded-lg" />
+            <div className="aspect-video animate-pulse rounded bg-bg2" />
           )}
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Zo komt hij op de Frame · 3840 × 2160 · {MODE_LABEL[mode].toLowerCase()}
-            {wanted && tvDefault && wanted !== tvDefault ? " · alleen deze keer" : ""}
+          <p className="mt-3 text-center text-xs text-text2">
+            {t.previewNote}
+            {wanted && tvDefault && wanted !== tvDefault ? ` · ${t.onlyThisTime}` : ""}
           </p>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="p-4">
+            {a ? (
+              <div className="space-y-1">
+                {editing !== null ? (
+                  <div className="flex gap-2">
+                    <TextField value={editing} onChange={setEditing} label={t.rename} className="flex-1" />
+                    <Button
+                      onClick={() => rename.mutate({ id, title: editing }, { onSuccess: () => setEditing(null) })}
+                    >
+                      {t.save}
+                    </Button>
+                  </div>
+                ) : (
+                  <h2 className="flex items-start gap-1 text-2xl leading-tight font-normal">
+                    <span className="flex-1">{a.title}</span>
+                    {a.own && <IconButton path={mdiPencil} label={t.rename} onClick={() => setEditing(a.title)} />}
+                  </h2>
+                )}
+                <p className="text-text">{a.artist}</p>
+                <p className="text-sm text-text2">{[a.date, a.medium].filter(Boolean).join(" · ")}</p>
+                <p className="text-sm text-text2">
+                  {a.department}
+                  {a.licence ? ` · ${a.licence}` : ""}
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  {a.categories.map((c) => (
+                    <Link key={c} to="/" search={{ cat: c }}>
+                      <Chip active={false} onClick={() => undefined}>
+                        {label(c)}
+                      </Chip>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-24 animate-pulse rounded bg-bg2" />
+            )}
+          </Card>
+
+          <Card className="space-y-3 p-4" header={t.display}>
+            <Segmented
+              label={t.display}
+              value={display}
+              onChange={(d) => setMode(d === "fill" ? "fill" : (first?.matteStyle ?? "light"))}
+              options={[
+                { value: "fill", label: t.fill },
+                { value: "matte", label: t.matte },
+              ]}
+            />
+            {display === "matte" && (
+              <Segmented
+                label={t.matte}
+                value={mode as "light" | "dark" | "blur"}
+                onChange={setMode}
+                options={[
+                  { value: "light", label: t.matteLight },
+                  { value: "dark", label: t.matteDark },
+                  { value: "blur", label: t.matteBlur },
+                ]}
+              />
+            )}
+            {a && <ShowButtons artworkId={a.id} mode={wanted} />}
+          </Card>
+
+          {a && (
+            <Card className="p-2">
+              <div className="flex flex-wrap items-center gap-1">
+                <Button appearance="plain" onClick={() => fav.mutate({ id: a.id, on: !a.favourite })}>
+                  <Icon path={a.favourite ? mdiHeart : mdiHeartOutline} size={18} />
+                  {a.favourite ? t.favourite : t.addFavourite}
+                </Button>
+                <Button
+                  appearance="plain"
+                  onClick={async () => {
+                    const next = await randomArtwork({ cat: a.categories[0] }).catch(() => null)
+                    if (next) void navigate({ to: "/art/$id", params: { id: next.id } })
+                  }}
+                >
+                  <Icon path={mdiDiceMultipleOutline} size={18} />
+                  {t.surprise}
+                </Button>
+                {a.page && (
+                  <a
+                    href={a.page}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-medium text-primary hover:bg-bg2"
+                  >
+                    <Icon path={mdiOpenInNew} size={18} />
+                    {a.department || t.source}
+                  </a>
+                )}
+                {a.own ? (
+                  <Button
+                    appearance="plain"
+                    variant="danger"
+                    onClick={() => {
+                      if (confirm(t.deleteConfirm))
+                        del.mutate(a.id, { onSuccess: () => void navigate({ to: "/collection" }) })
+                    }}
+                  >
+                    <Icon path={mdiDelete} size={18} />
+                    {t.delete}
+                  </Button>
+                ) : (
+                  <Button
+                    appearance="plain"
+                    variant="neutral"
+                    onClick={() => hide.mutate(a.id, { onSuccess: () => void navigate({ to: "/" }) })}
+                  >
+                    <Icon path={mdiEyeOff} size={18} />
+                    {t.hide}
+                  </Button>
+                )}
+              </div>
+              {Boolean(albums.data?.length) && (
+                <div className="space-y-1.5 border-t border-divider p-2">
+                  <p className="text-xs text-text2">{t.albums}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {albums.data!.map((al) => {
+                      const inAlbum = a.albums.includes(al.id)
+                      return (
+                        <Chip
+                          key={al.id}
+                          active={inAlbum}
+                          onClick={() => albumOps.toggle.mutate({ album: al.id, artworkId: a.id, on: !inAlbum })}
+                        >
+                          {al.name}
+                        </Chip>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              {a.shown.length > 0 && (
+                <p className="border-t border-divider p-2 text-xs text-text2">
+                  {t.shownBefore}:{" "}
+                  {a.shown
+                    .slice(0, 3)
+                    .map(
+                      (s) =>
+                        `${tvName(s.tv)} ${new Date(s.shownAt * 1000).toLocaleDateString(locale, { day: "numeric", month: "short" })}`,
+                    )
+                    .join(", ")}
+                </p>
+              )}
+            </Card>
+          )}
         </div>
       </div>
-
-      <aside className="space-y-7">
-        {a ? (
-          <header className="space-y-2">
-            <h1 className="font-display text-[1.9rem] leading-[1.1] font-light tracking-tight text-balance sm:text-4xl">
-              {a.title}
-            </h1>
-            <p className="text-lg text-foreground/80">{a.artist || "Onbekende maker"}</p>
-            <p className="text-sm text-muted-foreground">{[a.date, a.medium].filter(Boolean).join(" · ")}</p>
-            <div className="flex flex-wrap gap-1.5 pt-2">
-              {a.categories.map((c) => (
-                <Link key={c} to="/" search={{ cat: c }}>
-                  <Badge variant="secondary" className="rounded-full px-3 font-normal hover:bg-accent">
-                    {label(c)}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          </header>
-        ) : (
-          <div className="space-y-3">
-            <Skeleton className="h-9 w-4/5" />
-            <Skeleton className="h-5 w-1/2" />
-          </div>
-        )}
-
-        <div className="space-y-2.5">
-          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">Weergave</p>
-          <ToggleGroup
-            type="single"
-            value={mode}
-            onValueChange={(v) => v && setMode(v as Mode)}
-            className="grid w-full grid-cols-4 gap-1 rounded-xl bg-white/[0.04] p-1"
-            aria-label="Weergave"
-          >
-            {MODES.map((m) => (
-              <ToggleGroupItem
-                key={m}
-                value={m}
-                className="h-9 rounded-lg text-sm data-[state=on]:bg-white/[0.1] data-[state=on]:text-foreground"
-                title={MODE_LABEL[m]}
-              >
-                <span
-                  className={cn(
-                    "mr-1.5 inline-block size-2.5 rounded-full ring-1 ring-white/20",
-                    m === "light" && "bg-[#ECE8E1]",
-                    m === "dark" && "bg-[#1C1B19]",
-                    m === "blur" && "bg-gradient-to-br from-emerald-700 to-sky-800",
-                    m === "fill" && "bg-gradient-to-br from-amber-600 to-rose-800",
-                  )}
-                />
-                {MODE_SHORT[m]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        {a && <SendPanel artworkId={a.id} mode={mode} />}
-
-        {a && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-5">
-            <Button
-              variant={a.favourite ? "secondary" : "ghost"}
-              className="rounded-full"
-              onClick={() => fav.mutate({ id: a.id, on: !a.favourite })}
-            >
-              <Heart className={cn(a.favourite && "fill-primary text-primary")} />
-              {a.favourite ? "Favoriet" : "Bewaar als favoriet"}
-            </Button>
-            <Button
-              variant="ghost"
-              className="rounded-full"
-              onClick={async () => {
-                const next = await randomArtwork({ cat: a.categories[0] }).catch(() => null)
-                if (next) void navigate({ to: "/werk/$id", params: { id: next.id } })
-              }}
-            >
-              <Sparkles /> Iets anders
-            </Button>
-            <Button variant="ghost" className="rounded-full" asChild>
-              <a href={a.page} target="_blank" rel="noreferrer">
-                <ExternalLink /> {SOURCE_LABEL[a.source]}
-              </a>
-            </Button>
-            <Button
-              variant="ghost"
-              className="ml-auto rounded-full text-muted-foreground"
-              onClick={() =>
-                hide.mutate(a.id, {
-                  onSuccess: () => {
-                    toast("Verborgen; komt niet meer voorbij")
-                    void navigate({ to: "/" })
-                  },
-                })
-              }
-            >
-              <EyeOff /> Verberg
-            </Button>
-          </div>
-        )}
-        {a && a.shown.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Eerder getoond:{" "}
-            {a.shown
-              .slice(0, 3)
-              .map(
-                (s) =>
-                  `${config.data?.tvs.find((t) => t.id === s.tv)?.name ?? s.tv} ${new Date(s.shownAt * 1000).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}`,
-              )
-              .join(", ")}
-          </p>
-        )}
-        <p className="text-xs leading-relaxed text-muted-foreground/70">
-          Publiek domein (CC0) via {a ? SOURCE_LABEL[a.source] : "het museum"}. Het werk wordt op de Pi klaargemaakt en
-          daarna rechtstreeks naar de Frame gestuurd.
-        </p>
-      </aside>
     </div>
   )
 }

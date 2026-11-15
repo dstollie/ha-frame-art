@@ -1,217 +1,310 @@
-import { Check, Link2, Loader2, RefreshCw, TriangleAlert } from "lucide-react"
+import { mdiCheck, mdiContentCopy, mdiEye, mdiEyeOff, mdiLinkVariant, mdiOpenInNew, mdiRefresh } from "@mdi/js"
 import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, Button, Card, Icon, IconButton, Select, Spinner, Switch, TextField } from "@/components/ha"
 import {
   useConfig,
+  useMcp,
   usePair,
+  useRotateMcp,
   useSetCategory,
   useSetDisplay,
+  useSetSource,
+  useSources,
   useStartSync,
   useSync,
   useTvs,
+  type SourceSetting,
   type TvState,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { getEnv } from "@/lib/env"
+import { useLanguage } from "@/lib/hass"
+import { useLocale, useT } from "@/lib/i18n"
 
-function PairBlock({ tv }: { tv: TvState }) {
-  const pair = usePair()
-  const [open, setOpen] = useState(false)
-  if (tv.paired && !open) {
-    return (
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm text-emerald-400">
-          <Check className="size-4" /> Gekoppeld
-        </span>
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setOpen(true)}>
-          Opnieuw koppelen
-        </Button>
-      </div>
-    )
-  }
+function Row({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/[0.05] p-4">
-      <p className="text-sm leading-relaxed">
-        Zet de {tv.name.toLowerCase()} aan en sta erbij. Na <em>Koppelen</em> vraagt de TV of <strong>FrameArt</strong>{" "}
-        verbinding mag maken: kies <strong>Toestaan</strong>. Je hebt een minuut.
-      </p>
-      {!tv.on && (
-        <p className="flex items-center gap-2 text-sm text-amber-300">
-          <TriangleAlert className="size-4" /> De TV lijkt uit te staan.
-        </p>
-      )}
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={() => pair.mutate(tv.id, { onSuccess: () => setOpen(false) })}
-          disabled={pair.isPending}
-          className="rounded-full"
-        >
-          {pair.isPending ? <Loader2 className="animate-spin" /> : <Link2 />}
-          {pair.isPending ? "Wacht op Toestaan…" : "Koppelen"}
-        </Button>
-        {tv.paired && (
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            Annuleren
-          </Button>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm">{title}</p>
+        {help && <p className="text-xs text-text2">{help}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
+  )
+}
+
+function TvCard({ tv }: { tv: TvState }) {
+  const t = useT()
+  const lang = useLanguage()
+  const config = useConfig()
+  const pair = usePair()
+  const setDisplay = useSetDisplay()
+  const setCategory = useSetCategory()
+  const [repair, setRepair] = useState(false)
+  const rotation = config.data?.rotation ?? []
+  const catLabel = (id: string, fallback: string) =>
+    config.data?.categories.find((c) => c.id === id)?.label[lang] ?? fallback
+
+  return (
+    <Card
+      label={`TV ${tv.name}`}
+      header={
+        <span className="flex items-center gap-2">
+          {tv.name}
+          <span className="text-xs font-normal text-text2">
+            {tv.on ? t.tvOn : t.tvOff.split(" ·")[0]}
+            {!tv.canWake && ` · ${t.noWake}`}
+          </span>
+        </span>
+      }
+    >
+      <div className="px-4 pb-3">
+        {tv.paired && !repair ? (
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1 text-sm text-success">
+              <Icon path={mdiCheck} size={18} /> {t.paired}
+            </span>
+            <Button appearance="plain" variant="neutral" onClick={() => setRepair(true)}>
+              {t.repair}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Alert type="info">{t.pairHelp(tv.name)}</Alert>
+            {!tv.on && <Alert type="warning">{t.tvLooksOff}</Alert>}
+            <div className="flex gap-2">
+              <Button
+                disabled={pair.isPending}
+                onClick={() => pair.mutate(tv.id, { onSuccess: () => setRepair(false) })}
+              >
+                {pair.isPending ? <Spinner size={18} /> : <Icon path={mdiLinkVariant} size={18} />}
+                {pair.isPending ? t.waitingAllow : t.pair}
+              </Button>
+              {tv.paired && (
+                <Button appearance="plain" variant="neutral" onClick={() => setRepair(false)}>
+                  {t.cancel}
+                </Button>
+              )}
+            </div>
+            {pair.error && <Alert type="error">{pair.error.message}</Alert>}
+          </div>
         )}
       </div>
-      {pair.error && <p className="text-sm text-destructive">{pair.error.message}</p>}
+      <Row title={t.display} help={t.displayHelp}>
+        <Select
+          label={`${t.display} ${tv.name}`}
+          value={tv.display}
+          onChange={(d) => setDisplay.mutate({ tv: tv.id, display: d as "fill" | "matte", matteStyle: tv.matteStyle })}
+          options={[
+            { value: "fill", label: t.fill },
+            { value: "matte", label: t.matte },
+          ]}
+        />
+        {tv.display === "matte" && (
+          <Select
+            label={`${t.matte} ${tv.name}`}
+            value={tv.matteStyle}
+            onChange={(s) =>
+              setDisplay.mutate({ tv: tv.id, display: "matte", matteStyle: s as "light" | "dark" | "blur" })
+            }
+            options={[
+              { value: "light", label: t.matteLight },
+              { value: "dark", label: t.matteDark },
+              { value: "blur", label: t.matteBlur },
+            ]}
+          />
+        )}
+      </Row>
+      <Row title={t.rotation} help={t.rotationHelp}>
+        <Select
+          label={`${t.rotation} ${tv.name}`}
+          value={tv.category}
+          onChange={(category) => setCategory.mutate({ tv: tv.id, category })}
+          options={rotation.map((r) => ({
+            value: r.id,
+            label:
+              r.id === "all"
+                ? t.all
+                : r.id === "favourites"
+                  ? t.favourite
+                  : r.id === "collection"
+                    ? t.tabCollection
+                    : catLabel(r.id, r.label),
+          }))}
+        />
+      </Row>
+    </Card>
+  )
+}
+
+function SourceRow({ s }: { s: SourceSetting }) {
+  const t = useT()
+  const set = useSetSource()
+  const [key, setKey] = useState("")
+  return (
+    <div className="border-t border-divider px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-x-2 text-sm">
+            {s.name}
+            <span className="text-xs text-text2">
+              {s.licence}
+              {s.count ? ` · ${s.count.toLocaleString()}` : ""}
+            </span>
+            {s.homepage && (
+              <a
+                href={s.homepage}
+                target="_blank"
+                rel="noreferrer"
+                className="text-text2 hover:text-primary"
+                aria-label={s.homepage}
+              >
+                <Icon path={mdiOpenInNew} size={14} />
+              </a>
+            )}
+          </p>
+          <p className="text-xs text-text2">{s.description}</p>
+        </div>
+        <Switch
+          checked={s.enabled}
+          disabled={set.isPending || (Boolean(s.apiKey?.required) && !s.apiKey?.set && !key)}
+          onChange={(on) => set.mutate({ id: s.id, enabled: on, ...(key ? { apiKey: key } : {}) })}
+          label={s.name}
+        />
+      </div>
+      {s.apiKey && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <TextField
+            value={key}
+            onChange={setKey}
+            type="password"
+            label={t.apiKey}
+            placeholder={s.apiKey.set ? `${t.apiKeySet} ••••` : s.apiKey.required ? t.needsKey : t.apiKey}
+            className="min-w-[220px] flex-1"
+          />
+          <Button
+            appearance="filled"
+            disabled={!key || set.isPending}
+            onClick={() => set.mutate({ id: s.id, enabled: true, apiKey: key }, { onSuccess: () => setKey("") })}
+          >
+            {t.save}
+          </Button>
+          <a href={s.apiKey.helpUrl} target="_blank" rel="noreferrer" className="text-sm text-primary">
+            {t.getKey}
+          </a>
+        </div>
+      )}
     </div>
+  )
+}
+
+function McpCard() {
+  const t = useT()
+  const [visible, setVisible] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  const mcp = useMcp(true)
+  const rotate = useRotateMcp()
+  const endpoint =
+    getEnv().mode === "panel"
+      ? `${location.origin}${mcp.data?.path ?? "/api/frame_art/mcp"}`
+      : (mcp.data?.path ?? "/api/frame_art/mcp")
+  const copy = async (what: string, value: string) => {
+    await navigator.clipboard.writeText(value)
+    setCopied(what)
+    setTimeout(() => setCopied(null), 1500)
+  }
+  const token = mcp.data?.token ?? ""
+  const example = `claude mcp add --transport http frame-art ${endpoint} --header "Authorization: Bearer ${visible ? token : "<token>"}"`
+
+  return (
+    <Card header={t.mcp}>
+      <p className="px-4 text-sm text-text2">{t.mcpHelp}</p>
+      <Row title={t.endpoint}>
+        <code className="rounded bg-bg2 px-2 py-1 text-xs break-all">{endpoint}</code>
+        <IconButton
+          path={copied === "endpoint" ? mdiCheck : mdiContentCopy}
+          label={t.copy}
+          onClick={() => void copy("endpoint", endpoint)}
+        />
+      </Row>
+      <Row title={t.token}>
+        <code className="rounded bg-bg2 px-2 py-1 text-xs break-all">{visible ? token : "••••••••••••••••"}</code>
+        <IconButton path={visible ? mdiEyeOff : mdiEye} label={t.show} onClick={() => setVisible(!visible)} />
+        <IconButton
+          path={copied === "token" ? mdiCheck : mdiContentCopy}
+          label={t.copy}
+          onClick={() => void copy("token", token)}
+        />
+        <Button appearance="plain" variant="danger" onClick={() => confirm(t.rotateConfirm) && rotate.mutate()}>
+          <Icon path={mdiRefresh} size={18} />
+          {t.rotate}
+        </Button>
+      </Row>
+      <div className="border-t border-divider px-4 py-3">
+        <pre className="overflow-x-auto rounded bg-bg2 p-3 text-xs">{example}</pre>
+      </div>
+    </Card>
   )
 }
 
 export function SettingsPage() {
+  const t = useT()
+  const locale = useLocale()
   const tvs = useTvs()
-  const config = useConfig()
+  const sources = useSources()
   const sync = useSync()
   const startSync = useStartSync()
-  const setCategory = useSetCategory()
-  const setDisplay = useSetDisplay()
   const s = sync.data
 
   return (
-    <div className="mx-auto max-w-3xl space-y-10">
-      <header>
-        <h1 className="font-display text-3xl font-light tracking-tight sm:text-[2.6rem]">Instellingen</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          TV-adressen en standaardstijl staan in de add-on-opties in Home Assistant.
-        </p>
-      </header>
+    <div className="mx-auto max-w-3xl space-y-4">
+      <h2 className="text-sm font-medium text-text2">{t.tvs}</h2>
+      {tvs.data?.map((tv) => (
+        <TvCard key={tv.id} tv={tv} />
+      ))}
 
-      <section className="space-y-4">
-        <h2 className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">TV's</h2>
-        {tvs.data?.map((tv) => (
-          <section
-            key={tv.id}
-            aria-label={`TV ${tv.name}`}
-            className="space-y-4 rounded-2xl border border-border bg-card/50 p-5"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-display text-xl">{tv.name}</p>
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className={cn("size-1.5 rounded-full", tv.on ? "bg-emerald-400" : "bg-muted-foreground/40")} />
-                  {tv.on ? "Aan" : "Uit of standby"}
-                  {!tv.canWake && " · kan niet op afstand aan (geen wake_entity)"}
-                </p>
-              </div>
-            </div>
-            <PairBlock tv={tv} />
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div>
-                <p className="text-sm">Weergave</p>
-                <p className="text-xs text-muted-foreground">
-                  Vullen snijdt slim bij tot 16:9, zodat het onderwerp in beeld blijft. Per werk kun je het één keer
-                  anders kiezen.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Select
-                  value={tv.display}
-                  onValueChange={(display) =>
-                    setDisplay.mutate({ tv: tv.id, display: display as "fill" | "matte", matteStyle: tv.matteStyle })
-                  }
-                >
-                  <SelectTrigger className="w-56 rounded-full" aria-label={`Weergave ${tv.name}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fill">Vullen (slim bijsnijden)</SelectItem>
-                    <SelectItem value="matte">Passe-partout</SelectItem>
-                  </SelectContent>
-                </Select>
-                {tv.display === "matte" && (
-                  <Select
-                    value={tv.matteStyle}
-                    onValueChange={(matteStyle) =>
-                      setDisplay.mutate({
-                        tv: tv.id,
-                        display: "matte",
-                        matteStyle: matteStyle as "light" | "dark" | "blur",
-                      })
-                    }
-                  >
-                    <SelectTrigger className="w-32 rounded-full" aria-label={`Passe-partout ${tv.name}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Licht</SelectItem>
-                      <SelectItem value="dark">Donker</SelectItem>
-                      <SelectItem value="blur">Blur</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div>
-                <p className="text-sm">Rotatie</p>
-                <p className="text-xs text-muted-foreground">
-                  Waar “Nieuw schilderij” (dashboard, Node-RED) uit kiest.
-                </p>
-              </div>
-              <Select value={tv.category} onValueChange={(category) => setCategory.mutate({ tv: tv.id, category })}>
-                <SelectTrigger className="w-52 rounded-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {config.data?.rotation.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </section>
+      <Card header={t.sources}>
+        <p className="px-4 pb-2 text-sm text-text2">{t.sourcesHelp}</p>
+        {sources.data?.map((src) => (
+          <SourceRow key={src.id} s={src} />
         ))}
-      </section>
+      </Card>
 
-      <section className="space-y-4">
-        <h2 className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">Catalogus</h2>
-        <div className="space-y-4 rounded-2xl border border-border bg-card/50 p-5">
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat label="Werken" value={s ? s.total.toLocaleString("nl-NL") : "…"} />
-            <Stat label="Met kleur" value={s ? s.withColor.toLocaleString("nl-NL") : "…"} />
-            <Stat label="Cache" value={s ? `${Math.round(s.cacheBytes / 1_048_576)} MB` : "…"} />
-            <Stat
-              label="Laatst ververst"
-              value={
-                s?.lastRun
-                  ? new Date(s.lastRun).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })
-                  : "nog niet"
-              }
-            />
-          </dl>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-            <p className="text-sm text-muted-foreground">
-              {s?.state === "running"
-                ? `Bezig met ${s.source ?? "…"} · ${s.added} nieuw`
-                : "Ververst elke nacht automatisch."}
-              {s?.error && <span className="block text-destructive">{s.error}</span>}
-            </p>
-            <Button
-              variant="secondary"
-              className="rounded-full"
-              disabled={s?.state === "running" || startSync.isPending}
-              onClick={() => startSync.mutate()}
-            >
-              <RefreshCw className={cn(s?.state === "running" && "animate-spin")} />
-              Nu verversen
-            </Button>
+      <McpCard />
+
+      <Card header={t.catalogue}>
+        <dl className="grid grid-cols-2 gap-4 px-4 pb-3 sm:grid-cols-4">
+          {[
+            [t.catalogueWorks, s ? s.total.toLocaleString(locale) : "…"],
+            [t.catalogueColours, s ? s.withColor.toLocaleString(locale) : "…"],
+            [t.cache, s ? `${Math.round(s.cacheBytes / 1_048_576)} MB` : "…"],
+            [
+              t.lastSync,
+              s?.lastRun ? new Date(s.lastRun).toLocaleDateString(locale, { day: "numeric", month: "short" }) : t.never,
+            ],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-xs text-text2">{k}</dt>
+              <dd className="text-xl">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <Row title={s?.state === "running" ? t.syncing(s.source ?? "…", s.added) : t.nightly}>
+          <Button
+            appearance="filled"
+            disabled={s?.state === "running" || startSync.isPending}
+            onClick={() => startSync.mutate()}
+          >
+            {s?.state === "running" ? <Spinner size={18} /> : <Icon path={mdiRefresh} size={18} />}
+            {t.syncNow}
+          </Button>
+        </Row>
+        {s?.error && (
+          <div className="px-4 pb-3">
+            <Alert type="warning">{s.error}</Alert>
           </div>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-display text-2xl font-light">{value}</dd>
+        )}
+      </Card>
     </div>
   )
 }
