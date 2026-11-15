@@ -24,6 +24,11 @@ Foundational knowledge about how Frame Art is put together. Load the file that m
 **Keywords:** panel, native, integration, hacs, ingress, theme, ha-card, ha-button, web component, shadow dom
 **When to use:** changing the UI shell, the integration, or deciding whether to use another HA element
 
+### ADR: series playback
+**File:** @knowledge/codebase/06-adr-series-playback.md
+**Keywords:** series, playlist, slideshow, playback, player, shuffle, duration, pause, next, set_slideshow_status, re-use uploads
+**When to use:** changing how series play, the player in `player.ts`, upload re-use in `jobs.ts`, or the series entities and MCP tools
+
 ## Loading Logic
 
 1. **Primary:** Match keywords from the request
