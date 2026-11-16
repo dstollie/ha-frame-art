@@ -2,7 +2,7 @@
 
 Open-access museum art and your own photos on a Samsung The Frame, with one tap.
 
-> Install the **Frame Art integration** too (HACS → ⋮ → Custom repositories → `https://github.com/dstollie/ha-frame-art`, type _Integration_, then restart HA). It adds the native sidebar panel and the MCP endpoint. Once this add-on runs, HA shows **Frame Art discovered** under Devices & services: press _Configure_. Without the integration, use **Open Web UI**.
+> Install the **Frame Art integration** too (**Settings → Marketplace** on Home Assistant 2026.11 and later, HACS before that → ⋮ → Custom repositories → `https://github.com/dstollie/ha-frame-art`, type _Integration_, then restart HA). It adds the native sidebar panel and the MCP endpoint. Once this add-on runs, HA shows **Frame Art discovered** under Devices & services: press _Configure_. Without the integration, use **Open Web UI**.
 
 ## Using it
 
