@@ -1,0 +1,19 @@
+README.md
+  s_40acdc32effda0::t_68475522d03a2d 42-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b32081067f5c1f71595491af4f08569a95896d9d",
+  "prompts": {},
+  "sessions": {
+    "s_40acdc32effda0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7262b8b-4dd7-4e00-90b9-8036f831f03f",
+        "model": "unknown"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
