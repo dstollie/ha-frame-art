@@ -39,11 +39,11 @@
 - 🤖 **MCP server:** Claude or another MCP client can search art, build series and put works on a TV.
 - 🎨 **Community collections:** the catalogue is [frame-art-collections](https://github.com/dstollie/frame-art-collections), open JSON that anyone can add to.
 
-| Search as you type | Series, playing on a TV | On the phone |
-|---|---|---|
-| ![Searching for Hokusai](docs/screenshots/search.webp) | ![A series playing, dark theme](docs/screenshots/series-detail-dark.webp) | ![The panel on a phone, in Dutch](docs/screenshots/phone-nl.webp) |
-| **Explore** | **A work, as it will hang** | **Dark theme** |
-| ![Explore with what's on each TV](docs/screenshots/explore.webp) | ![The Starry Night with its smart crop](docs/screenshots/artwork.webp) | ![Explore in the dark theme](docs/screenshots/explore-dark.webp) |
+| Search as you type | A series, playing on a TV |
+|---|---|
+| ![Searching for Hokusai](docs/screenshots/search.webp) | ![A series playing, dark theme](docs/screenshots/series-detail-dark.webp) |
+| **A work, as it will hang** | **What's on each TV, in the dark theme** |
+| ![The Starry Night with its smart crop](docs/screenshots/artwork.webp) | ![Explore in the dark theme](docs/screenshots/explore-dark.webp) |
 
 ## Quick start
 
