@@ -10,7 +10,7 @@
 
 ## What it does
 
-- **Browse** tens of thousands of public-domain paintings by category (Impressionism, Old masters, Landscapes, Sea & water, Cities, Still life, Flowers, Portraits, Animals, Asian art, Religion & myth, Modern), by colour, by source, or by search. **Surprise me** picks one at random.
+- **Explore** thousands of curated, openly licensed works: search as you type (typo-tolerant, over title, artist, tags, collection and year), filter with facets (collection, period, artist, colour, shape, 4K, AI, licence), every view a shareable URL. Quick actions on each card (show on a TV, add to a series, new series), arrow keys to move around, **Surprise me** and shuffle. Not in the catalogue? Search the museums live.
 - **Display mode per TV:** *Fill (smart crop)* fills the screen and keeps faces and the subject in view, using an attention-based crop. *Passe-partout* (light, dark or blur) shows the whole work. On any work you can choose differently for that one time; the preview shows the real crop.
 - **One tap** to put it on a TV: the add-on downloads the work, renders an exact 3840×2160 JPEG, switches the TV on if needed, uploads it, shows it and switches Art Mode on. Its own old uploads are cleaned up, so the TV doesn't fill up.
 - **My collection:** upload your own photos or art (files or a URL), organise them in albums, and show them the same way.
@@ -39,47 +39,28 @@ Without the integration, the add-on's own ingress page shows the same UI (Open W
 
 Requirements: Home Assistant OS on aarch64 (Raspberry Pi 4/5), a Samsung The Frame from 2022 or later on the same network. Optional: Mosquitto (for HA entities) and SamsungTV Smart (to switch a TV on). All add-on options are in [frame_art/DOCS.md](frame_art/DOCS.md).
 
-## Art sources
+## Where the art comes from
 
-All sources are open access: only works marked CC0 or public domain get into the catalogue. Turn sources on and off under **Settings → Art sources**; keys are entered there too, never in environment variables.
+**The catalogue is [frame-art-collections](https://github.com/dstollie/frame-art-collections):** curated collections of openly licensed works (Impressionism, Dutch Golden Age, ukiyo-e, seasons, colour moods, Audubon, Haeckel, maps, AI-made works, …), published as JSON on GitHub Pages. The add-on syncs them every night (and on **Settings → Refresh now**), stores each work once however many collections hold it, and you switch collections on or off under **Settings → Collections**. CC BY and CC BY-SA works show their credit line.
 
-| Source | On by default | Key | Notes |
-|---|---|---|---|
-| The Metropolitan Museum of Art | ✓ | — | European and American paintings, Japanese prints |
-| Art Institute of Chicago | ✓ | — | Impressionism and more; images via IIIF with an `AIC-User-Agent` (thumbnails proxied) |
-| Rijksmuseum | ✓ | — | Linked Art search and IIIF |
-| Cleveland Museum of Art | ✓ | — | Every period and culture |
-| SMK – National Gallery of Denmark | ✓ | — | Danish Golden Age, Dutch and Flemish masters; IIIF up to 10k px |
-| Wikimedia Commons | ✓ | — | About 9,600 Google Art Project paintings from museums worldwide |
-| Europeana | — | optional | Hundreds of European museums; quality varies. Uses Europeana's public demo key without your own |
-| Smithsonian American Art Museum | — | required | Free api.data.gov key |
-| My collection | ✓ | — | Your uploads |
+**Museums are live search.** When you search Explore, *Search the museums* asks these APIs directly. Results aren't stored: save one to **My collection**, or propose it for the collections (a pre-filled GitHub issue). A result the catalogue already has says so (same id at the museum, the same Wikimedia Commons file, or a look-alike thumbnail).
 
-A nightly sync builds a local catalogue (SQLite) and derives categories, a dominant colour and the aspect ratio, because no museum API offers those across sources.
+| Museum | On by default | Key |
+|---|---|---|
+| The Metropolitan Museum of Art | ✓ | — |
+| Art Institute of Chicago | ✓ | — |
+| Rijksmuseum | ✓ | — |
+| Cleveland Museum of Art | ✓ | — |
+| SMK – National Gallery of Denmark | ✓ | — |
+| Wikimedia Commons (Google Art Project) | ✓ | — |
+| Europeana | — | optional (public demo key otherwise) |
+| Smithsonian American Art Museum | — | required (free api.data.gov key) |
 
-### Adding a provider
+**Share your own selection:** on a series or an album, *Share as collection* builds a `collection.v1` manifest (download the JSON) or opens the repository's issue form with the works filled in; a bot turns it into a pull request. Own uploads are never shared.
 
-A provider is one file in `frame_art/packages/server/src/providers/` that implements `ArtProvider` (`types.ts`):
+### Adding a museum
 
-```ts
-export const provider: ArtProvider = {
-  id: "mymuseum",                    // also the prefix of artwork ids: "mymuseum:123"
-  name: "My Museum",
-  description: "One sentence for Settings.",
-  homepage: "https://…",
-  licence: "CC0",                    // only let open-licence works in
-  defaultEnabled: false,
-  apiKey: { required: true, helpUrl: "https://…" },   // optional
-  thumbnails: "direct",              // or "proxy" when the browser can't load the CDN
-  imageHeaders: { /* extra headers for image downloads */ },
-  async *harvest({ fetch, known, apiKey, delayMs }) { /* yield newArtwork({...}) for ids not in `known` */ },
-  downloadUrl: (art) => art.imageUrl, // ≥ 3840 px if possible, but never a 10k+ px master
-}
-```
-
-1. Keep parsing in pure functions (`parseItem(json) → Artwork | null`) and test them on a real API response saved under `test/fixtures/`.
-2. Register it in `providers/registry.ts`. Settings, sync, search, rendering, MCP and the TVs pick it up from there.
-3. Run `pnpm check`. More guidance: [knowledge/implementation-guidelines/06-museum-sources.md](knowledge/implementation-guidelines/06-museum-sources.md).
+A provider is one file in `frame_art/packages/server/src/providers/` that implements `ArtProvider` (`types.ts`): `search(q, { fetch, apiKey, limit })` returns open-access works with an image, and `downloadUrl(art)` says where a ≥3840 px rendition lives. Keep parsing in pure functions tested on a saved API response under `test/fixtures/`, and register it in `providers/registry.ts`.
 
 ## AI assistants (MCP)
 
@@ -87,8 +68,11 @@ The add-on is an MCP server (streamable HTTP). Tools:
 
 | Tool | What it does |
 |---|---|
-| `search_art` | Search the catalogue (query, category, colour, source, landscape only) |
-| `list_sources` | Sources, categories and colours |
+| `search_art` | Search the catalogue: typo-tolerant text, collection, century, artist, colour, 4K, AI, or My collection |
+| `list_sources` | Collections, live-search museums, categories and colours |
+| `search_museums` | Live search in the museums; says which results the catalogue already has |
+| `save_museum_work` | Keep a live result in My collection |
+| `share_collection` | A series, album or works as a `collection.v1` manifest + pre-filled GitHub issue |
 | `list_tvs` | TVs, on/paired, display mode, what they show |
 | `get_current_art` | What a TV (or every TV) shows now |
 | `show_artwork` | Put a work on a TV, with `display: "fill" \| "matte"` and `matte_style: light \| dark \| blur` |
@@ -136,7 +120,7 @@ flowchart LR
 ```sh
 cd frame_art
 pnpm install
-pnpm dev:stack   # API + built panel + two fake Frames + ~660 real works
+pnpm dev:stack   # API + built panel + two fake Frames + a fake collections repo and museum
                  # → http://localhost:8123/frame-art/ (as an HA panel; ?theme=dark, ?lang=nl)
                  # → http://localhost:8123/api/hassio_ingress/dev-token-123/ (as the ingress page)
 ```

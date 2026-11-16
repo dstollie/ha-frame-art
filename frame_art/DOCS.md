@@ -6,7 +6,7 @@ Open-access museum art and your own photos on a Samsung The Frame, with one tap.
 
 ## Using it
 
-- **Explore:** public-domain paintings from the sources you enabled, by category, colour, source or search. **Surprise me** picks one at random.
+- **Explore:** the catalogue is the curated collections of frame-art-collections. Search as you type (typo-tolerant), filter with the facets (collection, period, artist, colour, shape, 4K, AI, licence), and use the quick actions on a card. Not there? **Search the museums** looks it up live; save a result to My collection or propose it for the collections.
 - **A work:** the preview shows how it will look on the Frame. **Fill (smart crop)** fills the screen and keeps the subject in view; **Passe-partout** (light, dark or blur) shows the whole work. Each TV has a default (Settings); on a work you can choose differently for this one time. Then **Show on …**.
 - **My collection:** upload images or add them from a URL, and organise them in albums.
 - **Series:** on a work, **Add to series** or **New series**; or make one from search results or an album. The **Series** tab lists them with cover, count and duration. On a series: drag (or the arrows) to reorder, set the time per work for the whole series or per work, turn shuffle on, and **Play on …** one or more TVs. You see what's on now and what comes next, with pause, next and stop. Playing something else on a TV pauses the series there.
@@ -31,7 +31,7 @@ The add-on never connects to a TV that hasn't been paired, so it can't pop up pr
 | `sync_hour` / `sync_on_start`             | Nightly catalogue refresh.                                                                                                                                                      |
 | `mqtt`                                    | HA entities through MQTT discovery (needs Mosquitto).                                                                                                                           |
 
-Art sources, API keys and the MCP token are managed in the panel under **Settings**, not here.
+Collections (on/off), live-search museums, API keys and the MCP token are managed in the panel under **Settings**, not here. `sync_hour` and `sync_on_start` refresh the collections.
 
 ## Home Assistant entities
 

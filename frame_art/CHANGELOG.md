@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- **The catalogue is frame-art-collections:** curated, openly licensed collections, synced nightly. Each work is stored once, however many collections hold it. Turn collections on or off under Settings. CC BY / BY-SA works show their credit.
+- **Museums are live search:** the Met, AIC, Rijksmuseum, Cleveland, SMK, Wikimedia (and Europeana, Smithsonian) answer searches directly. Save a result to My collection, or propose it for the collections. Results the catalogue already has are marked.
+- **Explore, rebuilt:** typo-tolerant search as you type (SQLite FTS5), facets with counts and removable chips, every view in the URL, a larger grid with quick actions and arrow-key navigation, shuffle and newest, and a landing with a row per collection and the newest works.
+- **Share as collection** from a series or album: a `collection.v1` JSON file or a pre-filled GitHub issue.
+- Moving up from 0.3: favourites, albums, series, history and works on the TV move to the matching collection work; works nothing uses are removed; used works without a match stay.
+- MCP: `search_museums`, `save_museum_work`, `share_collection`; `search_art` and `list_sources` know the collections.
+
 ## 0.3.1
 
 - Fix: the Supervisor watchdog checked `/api/config`, which needs a login since 0.2.0, so it restarted the add-on every few minutes. Panel requests failed in between (empty Art sources, catalogue stuck on "…") and a refresh never finished. The watchdog now uses `/healthz`.
