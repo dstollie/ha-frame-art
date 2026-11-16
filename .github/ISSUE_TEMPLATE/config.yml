@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Add or suggest an art collection
+    url: https://github.com/dstollie/frame-art-collections/issues/new?template=new-collection.yml
+    about: Collections live in frame-art-collections. A bot turns the form into a pull request.
+  - name: Questions and ideas
+    url: https://github.com/dstollie/frame-art-collections/discussions
+    about: Ask, share your wall, or propose something bigger.

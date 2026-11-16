@@ -1,0 +1,37 @@
+name: Bug report
+description: Something in the add-on, the panel or the integration doesn't work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Frame Art version
+      description: Settings → Apps (add-ons) → Frame Art.
+      placeholder: "0.4.0"
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.1"
+    validations:
+      required: true
+  - type: input
+    id: tv
+    attributes:
+      label: Frame model and year
+      placeholder: "QE55LS03B (2022)"
+  - type: textarea
+    id: log
+    attributes:
+      label: Add-on log
+      description: Settings → Apps → Frame Art → Log. Remove IP addresses and tokens.
+      render: text
