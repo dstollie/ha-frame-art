@@ -12,11 +12,13 @@ import { INGRESS_PROXY, Tokens, bearer, sameToken } from "./auth.js"
 import { CATEGORIES } from "./categorize.js"
 import { Collection, CollectionError } from "./collection.js"
 import { COLOR_FAMILIES } from "./color.js"
+import { COMMUNITY_BASE, Catalogue, catalogueItem, issueUrl, workLine, type Item } from "./community.js"
 import { paths, type Settings } from "./config.js"
 import { Store, type Query } from "./db.js"
 import type { HomeAssistant } from "./ha.js"
 import { ImageCache } from "./images.js"
 import { JobRunner } from "./jobs.js"
+import { LiveSearch } from "./live.js"
 import { createMcpServer } from "./mcp.js"
 import { MODES, toDTO, type Artwork, type ArtworkDTO, type Mode } from "./models.js"
 import { ID_TO_LABEL, NO_SERIES, PREFIX, ROTATION_OPTIONS, seriesLabels, type MqttBridge } from "./mqtt.js"
@@ -41,6 +43,8 @@ export interface Deps {
   providers?: ArtProvider[]
   jobOptions?: ConstructorParameters<typeof JobRunner>[6]
   playerOptions?: PlayerOptions
+  /** Where the community index lives; the dev stack serves a local copy. */
+  communityBase?: string
   /** "open" skips auth (dev stack, tests); "addon" requires ingress or a token. */
   auth?: "addon" | "open"
   /** Remote address of a request; tests override it. */
@@ -66,19 +70,37 @@ export type DisplaySetting = z.infer<typeof DisplaySchema>
 const rotationIds = ROTATION_OPTIONS.map(([id]) => id) as [string, ...string[]]
 
 const flag = z.enum(["0", "1", "true", "false"]).optional()
+const csv = z.string().optional()
 const listQuery = z.object({
   category: z.string().optional(),
   color: z.string().optional(),
-  q: z.string().optional(),
+  q: z.string().max(200).optional(),
   source: z.string().optional(),
   album: z.string().optional(),
   landscape: flag,
   favourites: flag,
+  /** Comma-separated collection ids. */
+  collection: csv,
+  /** Comma-separated century start years (1800 = 19th century; -1 = unknown). */
+  century: csv,
+  artist: z.string().optional(),
+  orient: z.enum(["landscape", "portrait", "square", "all"]).optional(),
+  uhd: flag,
+  ai: z.enum(["yes", "no"]).optional(),
+  licence: csv,
+  sort: z.enum(["shuffle", "new"]).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(120).optional(),
   seed: z.coerce.number().int().optional(),
 })
 const on = (v: string | undefined) => v === "1" || v === "true"
+const list = (v: string | undefined) =>
+  v
+    ? v
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean)
+    : []
 
 const durationSchema = z.number().int().min(MIN_DURATION).max(MAX_DURATION)
 const seriesCreate = z.object({
@@ -94,7 +116,59 @@ const seriesPatch = z.object({
   duration: durationSchema.optional(),
   shuffle: z.boolean().optional(),
 })
+const slug = z
+  .string()
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+  .min(3)
+  .max(64)
+const shareSchema = z.object({
+  id: slug,
+  title: z.string().trim().min(3).max(80),
+  description: z.string().trim().min(20).max(600),
+  tags: z
+    .array(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/))
+    .min(1)
+    .max(12),
+  curator: z.object({
+    name: z.string().trim().min(2),
+    github: z
+      .string()
+      .regex(/^[A-Za-z0-9-]{1,39}$/)
+      .optional(),
+  }),
+  artworkIds: z.array(z.string()).min(1).max(1000),
+  coverId: z.string().optional(),
+})
+export type ShareInput = z.infer<typeof shareSchema>
+
 const PLAYBACK_ACTIONS = ["pause", "resume", "toggle", "next", "stop"] as const satisfies readonly PlaybackAction[]
+
+/** Explore browses the catalogue; My collection is own uploads and saved works; an album or favourites span both. */
+export const toQuery = (p: z.infer<typeof listQuery>): Query => {
+  const mine = p.source === MINE
+  const anywhere = Boolean(p.album) || on(p.favourites)
+  const ai = p.ai === "yes" ? true : p.ai === "no" ? false : null
+  return {
+    category: p.category || null,
+    color: p.color || null,
+    q: p.q?.trim() || null,
+    album: p.album || null,
+    favourites: on(p.favourites),
+    catalogue: !mine && !anywhere,
+    mine,
+    collections: list(p.collection),
+    centuries: list(p.century).map(Number).filter(Number.isFinite),
+    artist: p.artist || null,
+    orient: p.orient === "all" ? null : (p.orient ?? (on(p.landscape) ? "landscape" : null)),
+    uhd: p.uhd === undefined ? null : on(p.uhd),
+    ai,
+    licences: list(p.licence),
+    ...(p.sort ? { sort: p.sort } : {}),
+    offset: p.offset ?? 0,
+    limit: p.limit ?? 48,
+    seed: p.seed ?? Math.floor(Date.now() / 86_400_000),
+  }
+}
 
 export function createServices(deps: Deps) {
   const { settings, tvs, ha } = deps
@@ -108,24 +182,12 @@ export function createServices(deps: Deps) {
     fetchFn,
     sources,
   )
-  const syncer = deps.syncer ?? new Syncer(store, sources, fetchFn, { thumb: (a) => images.thumb(a) })
+  const catalogue = new Catalogue(store, images, fetchFn, deps.communityBase ?? COMMUNITY_BASE)
+  const syncer = deps.syncer ?? new Syncer(store, sources, catalogue, fetchFn, { thumb: (a) => images.thumb(a) })
+  const live = new LiveSearch(store, sources, catalogue, fetchFn)
   const collection = new Collection(store, images, fetchFn)
   const tokens = new Tokens(store)
   const seriesStore = new SeriesStore(store)
-
-  const toQuery = (p: z.infer<typeof listQuery>): Query => ({
-    category: p.category || null,
-    color: p.color || null,
-    q: p.q || null,
-    source: p.source || null,
-    album: p.album || null,
-    sources: p.source || p.album || on(p.favourites) ? undefined : sources.enabledIds(),
-    landscape: on(p.landscape),
-    favourites: on(p.favourites),
-    offset: p.offset ?? 0,
-    limit: p.limit ?? 48,
-    seed: p.seed ?? Math.floor(Date.now() / 86_400_000),
-  })
 
   const svc = {
     settings,
@@ -139,6 +201,8 @@ export function createServices(deps: Deps) {
     ha,
     toQuery,
     series: seriesStore,
+    catalogue,
+    live,
     player: null as unknown as Player,
     mqtt: null as MqttBridge | null,
     runner: null as unknown as JobRunner,
@@ -227,7 +291,7 @@ export function createServices(deps: Deps) {
     next(tv: string) {
       svc.player.hold(tv)
       const category = svc.categoryOf(tv)
-      const art = svc.runner.pickNext(tv, category, category === "collection" ? [MINE] : sources.enabledIds())
+      const art = svc.runner.pickNext(tv, category)
       if (!art) throw new HTTPException(404, { message: "Geen werk gevonden in deze categorie" })
       return svc.runner.submit(tv, art.id, svc.modeFor(tv))
     },
@@ -263,6 +327,55 @@ export function createServices(deps: Deps) {
         items: seriesStore.items(row.id).map((i) => ({ artwork: svc.artDTO(i.artwork, favs), duration: i.duration })),
       }
     },
+    /** A selection as a collection.v1 manifest, the lines for the GitHub issue form, and what was left out. */
+    shareCollection(input: z.infer<typeof shareSchema>) {
+      const items: Item[] = []
+      const itemOf = new Map<string, Item>()
+      const works: string[] = []
+      const excluded: { id: string; reason: "own" | "unknown" | "licence-or-size" }[] = []
+      const notForIssue: string[] = []
+      for (const id of input.artworkIds) {
+        const art = store.get(id)
+        if (!art) {
+          excluded.push({ id, reason: "unknown" })
+          continue
+        }
+        if (art.source === MINE) {
+          excluded.push({ id, reason: "own" })
+          continue
+        }
+        const raw = art.source === "community" ? catalogue.raw(art.sourceId) : null
+        const item = raw ?? catalogueItem(art, sources.get(art.source)?.name ?? art.department ?? art.source)
+        if (!item) {
+          excluded.push({ id, reason: "licence-or-size" })
+          continue
+        }
+        items.push(item)
+        itemOf.set(id, item)
+        const line = workLine(art, raw)
+        if (line) works.push(line)
+        else notForIssue.push(id)
+      }
+      if (!items.length) throw new HTTPException(400, { message: "Niets om te delen: kies werken uit de catalogus" })
+      const coverItem = (input.coverId && itemOf.get(input.coverId)) || items[0]!
+      const meta = {
+        id: input.id,
+        title: input.title,
+        description: input.description,
+        tags: input.tags,
+        curator: input.curator,
+      }
+      const manifest = {
+        $schema: "https://dstollie.github.io/frame-art-collections/schema/collection.v1.schema.json",
+        schema_version: 1 as const,
+        ...meta,
+        cover: coverItem.id,
+        items,
+      }
+      const issue = issueUrl({ ...meta, works })
+      return { manifest, works, excluded, notForIssue, issueUrl: issue.url, issueLeftOut: issue.left }
+    },
+
     /** Series list and per-TV state to HA (MQTT); options change when series do. */
     publishSeries() {
       if (!svc.mqtt) return
@@ -329,7 +442,7 @@ const collectionCall = async <T>(fn: () => Promise<T> | T): Promise<T> => {
   }
 }
 export function createApi(svc: Services) {
-  const { store, settings, tvs, runner, syncer, images, sources, collection, tokens, series } = svc
+  const { store, settings, tvs, runner, syncer, images, sources, collection, tokens, series, catalogue, live } = svc
 
   const artOr404 = (id: string) => {
     const a = store.get(id)
@@ -369,18 +482,114 @@ export function createApi(svc: Services) {
           layout: LAYOUT,
           frame: { width: W, height: H, maxUpscale: MAX_UPSCALE, bevel: bevelWidth(W) },
           tvs: settings.tvs.filter((t) => tvs.has(t.id)).map((t) => ({ id: t.id, name: t.name })),
-          sources: sources
+          collections: catalogue
+            .collections()
+            .filter((col) => col.enabled)
+            .map(({ id, title, count }) => ({ id, title, count })),
+          live: sources
             .toDTO()
-            .filter((s) => s.enabled)
-            .map(({ id, name, count, local }) => ({ id, name, count, local })),
+            .filter((s) => s.enabled && !s.local)
+            .map(({ id, name }) => ({ id, name })),
         })
       })
       .get("/artworks", validate("query", listQuery), (c) => {
         const q = svc.toQuery(c.req.valid("query"))
-        const { items, total } = store.query(q)
+        const { items, total, fuzzy } = store.query(q)
         const favs = store.favouriteIds()
         const next = (q.offset ?? 0) + items.length
-        return c.json({ items: items.map((a) => svc.artDTO(a, favs)), total, nextOffset: next < total ? next : null })
+        return c.json({
+          items: items.map((a) => svc.artDTO(a, favs)),
+          total,
+          fuzzy,
+          nextOffset: next < total ? next : null,
+        })
+      })
+      .get("/facets", validate("query", listQuery), (c) => {
+        const f = store.facets(svc.toQuery(c.req.valid("query")))
+        const titles = new Map(catalogue.collections().map((col) => [col.id, col.title]))
+        return c.json({
+          ...f,
+          collections: f.collections.map(({ id, n }) => ({ id, n, title: titles.get(id) ?? id })),
+        })
+      })
+      .get("/landing", (c) => {
+        const favs = store.favouriteIds()
+        const dto = (id: string) => {
+          const a = store.get(id)
+          return a ? [svc.artDTO(a, favs)] : []
+        }
+        const rows = store.landing(12)
+        return c.json({
+          collections: catalogue
+            .collections()
+            .filter((col) => col.enabled && rows.has(col.id))
+            .map((col) => ({
+              id: col.id,
+              title: col.title,
+              description: col.description,
+              count: col.count,
+              items: rows.get(col.id)!.flatMap(dto),
+            })),
+          newest: store.query({ catalogue: true, sort: "new", limit: 18 }).items.map((a) => svc.artDTO(a, favs)),
+          popular: [] as ReturnType<typeof svc.artDTO>[],
+        })
+      })
+      .get(
+        "/live",
+        validate("query", z.object({ q: z.string().trim().min(2).max(200), source: z.string().optional() })),
+        async (c) => {
+          const { q, source } = c.req.valid("query")
+          const favs = store.favouriteIds()
+          const groups = await live.search(q, source ? { only: source } : {})
+          return c.json(
+            groups.map((g) => ({
+              id: g.id,
+              name: g.name,
+              error: g.error,
+              results: g.results.map((r) => ({
+                artwork: { ...svc.artDTO(r.art, favs), thumb: r.art.thumbUrl, thumbPath: null },
+                inCatalogue: r.inCatalogue,
+                saved: r.saved,
+                proposeUrl: r.proposeUrl,
+              })),
+            })),
+          )
+        },
+      )
+      .post("/live/save", validate("json", z.object({ id: z.string() })), (c) => {
+        const art = live.save(c.req.valid("json").id)
+        if (!art) throw new HTTPException(404, { message: "Zoek opnieuw; dit resultaat is verlopen" })
+        return c.json(svc.artDTO(art))
+      })
+      .delete("/saved/:id", (c) => {
+        store.setSaved(c.req.param("id"), false)
+        return c.json({ saved: false as const })
+      })
+      .get("/collections", (c) =>
+        c.json(
+          catalogue
+            .collections()
+            .map(({ id, title, description, curator, count, landscapeCount, uhdCount, aiCount, enabled, coverId }) => {
+              const cover = coverId ? store.get(coverId) : null
+              return {
+                id,
+                title,
+                description,
+                curator,
+                count,
+                landscapeCount,
+                uhdCount,
+                aiCount,
+                enabled,
+                cover: cover ? svc.artDTO(cover) : null,
+              }
+            }),
+        ),
+      )
+      .put("/settings/collections/:id", validate("json", z.object({ enabled: z.boolean() })), (c) => {
+        if (!catalogue.setEnabled(c.req.param("id"), c.req.valid("json").enabled))
+          throw new HTTPException(404, { message: "Onbekende collectie" })
+        return c.json({ enabled: c.req.valid("json").enabled })
       })
       .get("/random", validate("query", listQuery), (c) => {
         const a = store.random(svc.toQuery(c.req.valid("query")))
@@ -394,6 +603,8 @@ export function createApi(svc: Services) {
           ...svc.artDTO(a),
           albums: store.albumsOf(a.id),
           series: series.containing(a.id),
+          collections: svc.catalogue.collectionsOf(a.id),
+          saved: store.isSaved(a.id),
           shown: shown.map((h) => ({ tv: h.tv, shownAt: h.shownAt, mode: h.mode })),
         })
       })
@@ -619,6 +830,7 @@ export function createApi(svc: Services) {
         svc.player.play(row.id, ids)
         return c.json(ids.map((tv) => ({ tv, playback: svc.playbackOf(tv) })))
       })
+      .post("/share", validate("json", shareSchema), (c) => c.json(svc.shareCollection(c.req.valid("json"))))
       .get("/jobs/:id", (c) => {
         const job = runner.jobs.get(c.req.param("id"))
         if (!job) throw new HTTPException(404, { message: "Onbekende opdracht" })
@@ -648,7 +860,6 @@ export function createApi(svc: Services) {
           if (!sources.get(id)) throw new HTTPException(404, { message: "Onbekende bron" })
           const { enabled, apiKey } = c.req.valid("json")
           sources.set(id, { enabled, ...(apiKey === undefined ? {} : { apiKey }) })
-          if (enabled) syncer.trigger()
           return c.json(sources.toDTO().find((s) => s.id === id)!)
         },
       )

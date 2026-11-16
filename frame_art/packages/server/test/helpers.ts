@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import sharp from "sharp"
 
 import { ensureDirs, type Settings } from "../src/config.js"
+import type { Store } from "../src/db.js"
 import { newArtwork, type Artwork } from "../src/models.js"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -68,4 +69,16 @@ export function tempSettings(extra: Partial<Settings> = {}): Settings {
   }
   ensureDirs(s)
   return s
+}
+
+/** Puts works in an enabled test collection, so they're part of the catalogue Explore shows. */
+export function inCatalogue(store: Store, ids: string[], collection = "test") {
+  store.sqlite
+    .prepare("INSERT OR IGNORE INTO community_collections (id, title, tags, count) VALUES (?, ?, '[]', ?)")
+    .run(collection, `Collection ${collection}`, ids.length)
+  const ins = store.sqlite.prepare(
+    "INSERT OR IGNORE INTO community_items (collection_id, item_id, artwork_id, position) VALUES (?, ?, ?, ?)",
+  )
+  ids.forEach((id, i) => ins.run(collection, id, id, i))
+  store.rebuildSearch()
 }

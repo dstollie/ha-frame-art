@@ -1,19 +1,17 @@
 import type { Artwork } from "../models.js"
 import type { Fetch } from "./http.js"
 
-export interface HarvestContext {
+export interface SearchContext {
   fetch: Fetch
-  /** IDs (`<provider>:<id>`) already in the catalogue; skip them. */
-  known: Set<string>
   /** The user's API key from Settings, or null. */
   apiKey: string | null
-  /** Politeness delay between requests; tests pass 0. */
-  delayMs?: number
+  /** At most this many results. */
+  limit: number
 }
 
 /**
- * An art source. A provider only knows how to list its works and where their images live;
- * the catalogue, categories, colours, rendering and TVs are shared.
+ * An art source. The catalogue comes from the community collections; museum providers answer
+ * live searches (nothing is stored until you save a result) and know where their images live.
  */
 export interface ArtProvider {
   /** Stable id, also the prefix of artwork ids (`aic:16568`). */
@@ -36,8 +34,8 @@ export interface ArtProvider {
   thumbnails: "direct" | "proxy"
   /** Extra headers for image downloads (e.g. AIC wants an AIC-User-Agent). */
   imageHeaders?: Record<string, string>
-  /** Nightly sync: yield works that aren't in `ctx.known` yet. Omit for local sources. */
-  harvest?(ctx: HarvestContext): AsyncGenerator<Artwork>
+  /** Live search: open-licence works with an image for this text. Omit for local sources. */
+  search?(q: string, ctx: SearchContext): Promise<Artwork[]>
   /** URL of a source image big enough for a 3840×2160 render, without fetching 10k+ px masters. */
   downloadUrl(art: Artwork): string
 }

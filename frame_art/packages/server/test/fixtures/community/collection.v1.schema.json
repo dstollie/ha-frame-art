@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dstollie.github.io/frame-art-collections/schema/collection.v1.schema.json",
+  "title": "Frame Art collection manifest, version 1",
+  "description": "A curated set of openly licensed artworks for Samsung The Frame. Images stay where they are hosted; the manifest only links to them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "description", "tags", "curator", "cover", "items"],
+  "properties": {
+    "$schema": {
+      "description": "Points editors at this schema.",
+      "const": "https://dstollie.github.io/frame-art-collections/schema/collection.v1.schema.json"
+    },
+    "schema_version": { "const": 1 },
+    "id": {
+      "description": "Kebab-case slug, equal to the file name without .json.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "minLength": 3,
+      "maxLength": 64
+    },
+    "title": { "type": "string", "minLength": 3, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 20, "maxLength": 600 },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+    },
+    "curator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 2 },
+        "github": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$" },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    },
+    "cover": {
+      "description": "Id of the item that represents the collection.",
+      "type": "string"
+    },
+    "generator": {
+      "description": "Script that produced this file. Regenerating overwrites it; edit the generator instead of the file.",
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/item" }
+    }
+  },
+  "$defs": {
+    "httpsUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "artist",
+        "year",
+        "image",
+        "width",
+        "height",
+        "licence",
+        "source",
+        "source_url",
+        "ai_generated"
+      ],
+      "properties": {
+        "id": {
+          "description": "Stable id, '<source>-<id at source>', e.g. 'met-436535' or 'commons-<sha1-prefix>'.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[A-Za-z0-9_.]+)+$",
+          "maxLength": 120
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "artist": {
+          "description": "Artist, workshop or culture; 'Unknown' when not known.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "year": {
+          "description": "Year of creation (start year for a range); null when unknown.",
+          "type": ["integer", "null"],
+          "minimum": -3000,
+          "maximum": 2100
+        },
+        "date": {
+          "description": "Free-text date as the source gives it, e.g. 'c. 1665'.",
+          "type": "string",
+          "maxLength": 80
+        },
+        "image": {
+          "description": "Highest-resolution image the source offers (JPEG, PNG or WebP).",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "image_4k": {
+          "description": "Optional smaller rendition: 3840 px wide (Wikimedia Commons' largest standard thumbnail) or fitting 3840×3840 (IIIF). Prefer it over 'image' when the master is huge.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "thumbnail": {
+          "description": "Preview of 400-1280 px on the long edge for browsing.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "iiif": {
+          "description": "IIIF Image API base URL (without /info.json) when the source offers one.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "width": { "description": "Pixel width of 'image'.", "type": "integer", "minimum": 1 },
+        "height": { "description": "Pixel height of 'image'.", "type": "integer", "minimum": 1 },
+        "licence": {
+          "description": "Only open licences. 'CC0-1.0' and 'PD' (public domain, incl. the Public Domain Mark) need no credit; CC-BY and CC-BY-SA need 'attribution'.",
+          "type": "string",
+          "enum": [
+            "CC0-1.0",
+            "PD",
+            "CC-BY-2.0",
+            "CC-BY-2.5",
+            "CC-BY-3.0",
+            "CC-BY-4.0",
+            "CC-BY-SA-2.0",
+            "CC-BY-SA-2.5",
+            "CC-BY-SA-3.0",
+            "CC-BY-SA-4.0"
+          ]
+        },
+        "attribution": {
+          "description": "Credit line to show with the work. Required for CC-BY and CC-BY-SA.",
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300
+        },
+        "source": {
+          "description": "Institution or platform, e.g. 'The Metropolitan Museum of Art'.",
+          "type": "string",
+          "minLength": 2
+        },
+        "source_url": {
+          "description": "Page at the source that documents the work and its licence.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "ai_generated": {
+          "description": "True when the image was made with a generative AI model.",
+          "type": "boolean"
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 60 }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["licence"], "properties": { "licence": { "type": "string", "pattern": "^CC-BY" } } },
+          "then": { "required": ["attribution"] }
+        }
+      ]
+    }
+  }
+}

@@ -21,21 +21,18 @@ describe("Met", () => {
   it("skips works that are not public domain", () => {
     expect(met.parseObject({ ...fixture("met_object.json"), isPublicDomain: false })).toBeNull()
   })
-  it("harvests through v1.1 search with paging and skips known ids", async () => {
+  it("searches through v1.1 (the retired /v1/search is never called) and fetches the objects", async () => {
     const calls: string[] = []
     const obj = fixture("met_object.json")
     const fake = (async (url: string) => {
       calls.push(url)
-      if (url.includes("/v1.1/search")) {
-        return Response.json({ total: 2, objectIDs: url.includes("departmentId=11") ? [436965, 1] : [] })
-      }
-      return Response.json(url.endsWith("/436965") ? obj : { ...obj, objectID: 1 })
+      if (url.includes("/v1.1/search")) return Response.json({ total: 2, objectIDs: [436965, 1] })
+      return Response.json(url.endsWith("/436965") ? obj : { ...obj, objectID: 1, isPublicDomain: false })
     }) as typeof fetch
-    const got = []
-    for await (const a of met.harvest(fake, new Set(["met:1"]), { delayMs: 0 })) got.push(a.id)
-    expect(got).toEqual(["met:436965"])
-    expect(calls.some((c) => c.includes("/v1/search"))).toBe(false) // retired endpoint
-    expect(calls.filter((c) => c.includes("/v1/objects/")).length).toBe(1)
+    const got = await met.search("cypresses", { fetch: fake, apiKey: null, limit: 5 })
+    expect(got.map((a) => a.id)).toEqual(["met:436965"])
+    expect(calls[0]).toContain("q=cypresses")
+    expect(calls.some((c) => c.includes("/v1/search"))).toBe(false)
   })
 })
 

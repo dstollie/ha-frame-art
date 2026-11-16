@@ -1,16 +1,8 @@
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./http.js"
-import type { ArtProvider } from "./types.js"
+import { getJson } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const BASE = "https://collectionapi.metmuseum.org/public/collection"
-
-/** /v1/search was retired on 1 Oct 2026; /v1.1/search pages with offset/limit (max 500). */
-export const QUERIES: Record<string, string>[] = [
-  { departmentId: "11", q: "*" }, // European Paintings
-  { departmentId: "1", medium: "Paintings", q: "*" }, // The American Wing
-  { departmentId: "21", q: "painting" }, // Modern Art (public-domain part)
-  { departmentId: "6", geoLocation: "Japan", q: "woodblock" }, // Japanese prints
-]
 
 interface MetObject {
   objectID: number
@@ -63,49 +55,28 @@ export function parseObject(obj: MetObject): Artwork | null {
   })
 }
 
-async function ids(fetchFn: Fetch, query: Record<string, string>): Promise<number[]> {
-  const out: number[] = []
-  for (let offset = 0; ; offset += 500) {
-    const params = new URLSearchParams({
-      ...query,
-      hasImages: "true",
-      isPublicDomain: "true",
-      offset: String(offset),
-      limit: "500",
-    })
-    const page = await getJson<{ objectIDs: number[] | null }>(fetchFn, `${BASE}/v1.1/search?${params}`)
-    const got = page?.objectIDs ?? []
-    out.push(...got)
-    if (got.length < 500) return out
-  }
-}
-
-export async function* harvest(
-  fetchFn: Fetch,
-  known: Set<string>,
-  opts: { delayMs?: number } = {},
-): AsyncGenerator<Artwork> {
-  const seen = new Set<number>()
-  for (const query of QUERIES) {
-    let list: number[]
-    try {
-      list = await ids(fetchFn, query)
-    } catch {
-      continue
-    }
-    for (const oid of list) {
-      if (seen.has(oid) || known.has(`met:${oid}`)) continue
-      seen.add(oid)
-      try {
-        const obj = await getJson<MetObject>(fetchFn, `${BASE}/v1/objects/${oid}`)
-        const art = obj && parseObject(obj)
-        if (art) yield art
-      } catch {
-        /* one broken object is not worth stopping for */
-      }
-      await sleep(opts.delayMs ?? 120)
+/** Live search: ids from /v1.1/search (/v1/search was retired in Oct 2026), then the objects, six at a time. */
+export async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const params = new URLSearchParams({
+    q,
+    hasImages: "true",
+    isPublicDomain: "true",
+    offset: "0",
+    limit: String(ctx.limit),
+  })
+  const page = await getJson<{ objectIDs: number[] | null }>(ctx.fetch, `${BASE}/v1.1/search?${params}`)
+  const ids = (page?.objectIDs ?? []).slice(0, ctx.limit)
+  const out: Artwork[] = []
+  for (let i = 0; i < ids.length; i += 6) {
+    const objs = await Promise.all(
+      ids.slice(i, i + 6).map((oid) => getJson<MetObject>(ctx.fetch, `${BASE}/v1/objects/${oid}`).catch(() => null)),
+    )
+    for (const o of objs) {
+      const art = o && parseObject(o)
+      if (art) out.push(art)
     }
   }
+  return out
 }
 
 export const provider: ArtProvider = {
@@ -116,6 +87,6 @@ export const provider: ArtProvider = {
   licence: "CC0",
   defaultEnabled: true,
   thumbnails: "direct",
-  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

@@ -1,7 +1,7 @@
 /** Rijksmuseum Linked Art Search (no API key) + IIIF on iiif.micr.io. */
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./http.js"
-import type { ArtProvider } from "./types.js"
+import { getJson } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const SEARCH = "https://data.rijksmuseum.nl/search/collection"
 const AAT_DUTCH = "http://vocab.getty.edu/aat/300388256"
@@ -119,29 +119,27 @@ export function parseObject(raw: unknown): Artwork | null {
   })
 }
 
-export async function* harvest(
-  fetchFn: Fetch,
-  known: Set<string>,
-  opts: { delayMs?: number } = {},
-): AsyncGenerator<Artwork> {
-  let url: string | null = `${SEARCH}?type=painting&imageAvailable=true`
-  while (url) {
-    const page: unknown = await getJson<unknown>(fetchFn, url)
-    if (!page) return
-    const { ids, next } = parseSearch(page)
-    url = next
-    for (const lod of ids) {
-      if (known.has(`rijks:${lod.split("/").pop()}`)) continue
-      try {
-        const obj = await getJson<unknown>(fetchFn, lod, { Accept: "application/ld+json" })
-        const art = obj ? parseObject(obj) : null
-        if (art) yield art
-      } catch {
-        /* one broken object is not worth stopping for */
-      }
-      await sleep(opts.delayMs ?? 250)
+/** Live search: ids from the Linked Art search, then the objects, a few at a time. */
+export async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const page: unknown = await getJson<unknown>(
+    ctx.fetch,
+    `${SEARCH}?${new URLSearchParams({ description: q, imageAvailable: "true" })}`,
+  )
+  if (!page) return []
+  const ids = parseSearch(page).ids.slice(0, ctx.limit)
+  const out: Artwork[] = []
+  for (let i = 0; i < ids.length; i += 4) {
+    const objs = await Promise.all(
+      ids
+        .slice(i, i + 4)
+        .map((lod) => getJson<unknown>(ctx.fetch, lod, { Accept: "application/ld+json" }).catch(() => null)),
+    )
+    for (const o of objs) {
+      const art = o ? parseObject(o) : null
+      if (art) out.push(art)
     }
   }
+  return out
 }
 
 export const provider: ArtProvider = {
@@ -152,6 +150,6 @@ export const provider: ArtProvider = {
   licence: "Public domain",
   defaultEnabled: true,
   thumbnails: "direct",
-  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  search,
   downloadUrl: (art) => art.imageUrl.replace("/full/max/", "/full/!4096,4096/"),
 }

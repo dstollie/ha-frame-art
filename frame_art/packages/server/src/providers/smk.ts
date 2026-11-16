@@ -1,10 +1,9 @@
 /** SMK, the National Gallery of Denmark: open API, public-domain paintings with IIIF. No key. */
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, round4, sleep } from "./http.js"
-import type { ArtProvider, HarvestContext } from "./types.js"
+import { getJson, round4 } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const SEARCH = "https://api.smk.dk/api/v1/art/search/"
-const ROWS = 100
 
 interface SmkItem {
   object_number: string
@@ -64,22 +63,14 @@ export function parseItem(item: SmkItem): Artwork | null {
   })
 }
 
-export function searchUrl(offset: number): string {
-  const filters = "[public_domain:true],[has_image:true],[object_names:maleri]"
-  return `${SEARCH}?keys=*&filters=${encodeURIComponent(filters)}&offset=${offset}&rows=${ROWS}`
+export function searchUrl(q: string, rows: number): string {
+  const filters = "[public_domain:true],[has_image:true]"
+  return `${SEARCH}?keys=${encodeURIComponent(q)}&filters=${encodeURIComponent(filters)}&offset=0&rows=${rows}`
 }
 
-async function* harvest(ctx: HarvestContext): AsyncGenerator<Artwork> {
-  for (let offset = 0; ; offset += ROWS) {
-    const page = await getJson<{ items?: SmkItem[] }>(ctx.fetch, searchUrl(offset))
-    const items = page?.items ?? []
-    for (const item of items) {
-      const art = parseItem(item)
-      if (art && !ctx.known.has(art.id)) yield art
-    }
-    if (items.length < ROWS) return
-    await sleep(ctx.delayMs ?? 500)
-  }
+async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const page = await getJson<{ items?: SmkItem[] }>(ctx.fetch, searchUrl(q, ctx.limit))
+  return (page?.items ?? []).flatMap((item) => parseItem(item) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -90,6 +81,6 @@ export const provider: ArtProvider = {
   licence: "Public domain",
   defaultEnabled: true,
   thumbnails: "direct",
-  harvest,
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

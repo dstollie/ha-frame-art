@@ -43,10 +43,10 @@ describe("Art Institute of Chicago", () => {
     expect(aic.provider.thumbnails).toBe("proxy")
     expect(aic.provider.imageHeaders).toHaveProperty("AIC-User-Agent")
   })
-  it("pages by id, not by offset", () => {
-    const body = aic.searchBody(16568)
-    expect(JSON.stringify(body)).toContain('"gt":16568')
-    expect(body.sort).toEqual([{ id: "asc" }])
+  it("searches public-domain works with an image", () => {
+    const body = aic.searchBody("bedroom", 12)
+    expect(body).toMatchObject({ q: "bedroom", limit: 12 })
+    expect(JSON.stringify(body.query)).toContain("is_public_domain")
   })
 })
 
@@ -61,7 +61,7 @@ describe("SMK", () => {
       year: 1891,
     })
     expect(art.imageUrl).toBe("https://iip.smk.dk/iiif/jp2/gf06g715p_kms8914.tif.jp2/full/!4096,4096/0/default.jpg")
-    expect(smk.searchUrl(200)).toContain("offset=200")
+    expect(smk.searchUrl("ballin", 12)).toContain("keys=ballin")
   })
 })
 
@@ -93,7 +93,7 @@ describe("Europeana", () => {
     for (const a of arts.filter(Boolean)) expect(["CC0", "Public domain"]).toContain(a.licence)
     expect(europeana.parseItem({ ...items[0], edmIsShownBy: ["https://x/icoon.ico?file=1"] })).toBeNull()
     expect(europeana.parseItem({ ...items[0], rights: ["http://creativecommons.org/licenses/by-sa/4.0/"] })).toBeNull()
-    expect(europeana.searchUrl("k", "*")).toContain("RIGHTS%3A*publicdomain*")
+    expect(europeana.searchUrl("k", "vermeer", 12)).toContain("RIGHTS%3A*publicdomain*")
   })
 })
 
@@ -105,10 +105,8 @@ describe("Smithsonian", () => {
     expect(arts[0].imageUrl).toContain("max=3840")
     expect(arts[0].licence).toBe("CC0")
   })
-  it("doesn't harvest without a key", async () => {
-    const got = []
-    for await (const a of smithsonian.provider.harvest!({ fetch: fetch, known: new Set(), apiKey: null })) got.push(a)
-    expect(got).toEqual([])
+  it("doesn't search without a key", async () => {
+    expect(await smithsonian.provider.search!("hopper", { fetch: fetch, apiKey: null, limit: 5 })).toEqual([])
   })
 })
 

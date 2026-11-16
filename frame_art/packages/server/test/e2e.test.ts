@@ -16,7 +16,7 @@ import type { HomeAssistant } from "../src/ha.js"
 import type { JobDTO } from "../src/jobs.js"
 import { MqttBridge } from "../src/mqtt.js"
 import { FrameTV, type TV } from "../src/tv.js"
-import { art, jpeg, tempSettings } from "./helpers.js"
+import { art, inCatalogue, jpeg, tempSettings } from "./helpers.js"
 
 let frame: FakeFrame
 let settings: Settings
@@ -90,6 +90,7 @@ async function boot(
     art("rijks:4", { title: "Gezicht op Delft", artist: "Johannes Vermeer", year: 1660, aspect: 1.2 }),
     art("cleveland:5", { title: "View of the Sea", artist: "Unknown", year: 1850, aspect: 1.8 }),
   ])
+  inCatalogue(svc.store, ["met:1", "met:2", "met:3", "rijks:4", "cleveland:5"])
   api = testClient(createApi(svc))
   if (opts.paired !== false) {
     const r = await api.tvs[":tv"].pair.$post({ param: { tv: "woonkamer" } })

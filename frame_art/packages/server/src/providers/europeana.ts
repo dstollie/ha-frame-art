@@ -1,7 +1,7 @@
 /** Europeana: European cultural heritage aggregator. Public-domain and CC0 paintings only. */
 import { newArtwork, type Artwork } from "../models.js"
-import { firstYear, getJson, sleep } from "./http.js"
-import type { ArtProvider, HarvestContext } from "./types.js"
+import { firstYear, getJson } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const SEARCH = "https://api.europeana.eu/record/v2/search.json"
 /** Europeana's public demo key; fine for a nightly sync, use your own for more. */
@@ -43,34 +43,22 @@ export function parseItem(item: Item): Artwork | null {
   })
 }
 
-export function searchUrl(key: string, cursor: string): string {
+export function searchUrl(key: string, q: string, rows: number): string {
   const params = new URLSearchParams({
     wskey: key,
-    query: "what:(painting OR schilderij OR peinture OR gemälde OR pittura)",
+    query: q,
     media: "true",
     thumbnail: "true",
-    rows: "100",
+    rows: String(rows),
     profile: "rich",
-    cursor,
   })
   for (const qf of ["TYPE:IMAGE", "RIGHTS:*publicdomain*", "IMAGE_SIZE:extra_large"]) params.append("qf", qf)
   return `${SEARCH}?${params}`
 }
 
-async function* harvest(ctx: HarvestContext): AsyncGenerator<Artwork> {
-  let cursor: string | null = "*"
-  while (cursor) {
-    const page: { items?: Item[]; nextCursor?: string } | null = await getJson(
-      ctx.fetch,
-      searchUrl(ctx.apiKey || DEMO_KEY, cursor),
-    )
-    for (const item of page?.items ?? []) {
-      const art = parseItem(item)
-      if (art && !ctx.known.has(art.id)) yield art
-    }
-    cursor = page?.nextCursor ?? null
-    await sleep(ctx.delayMs ?? 1000)
-  }
+async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const page = await getJson<{ items?: Item[] }>(ctx.fetch, searchUrl(ctx.apiKey || DEMO_KEY, q, ctx.limit))
+  return (page?.items ?? []).flatMap((item) => parseItem(item) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -82,6 +70,6 @@ export const provider: ArtProvider = {
   defaultEnabled: false,
   apiKey: { required: false, helpUrl: "https://pro.europeana.eu/page/get-api" },
   thumbnails: "direct",
-  harvest,
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

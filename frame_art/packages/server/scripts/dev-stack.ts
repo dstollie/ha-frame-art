@@ -17,9 +17,9 @@ import sharp from "sharp"
 import { createApp } from "../src/app.js"
 import { ensureDirs, paths, type Settings } from "../src/config.js"
 import type { HomeAssistant } from "../src/ha.js"
-import { newArtwork, type Artwork } from "../src/models.js"
-import * as cleveland from "../src/providers/cleveland.js"
-import * as rijks from "../src/providers/rijks.js"
+import { newArtwork } from "../src/models.js"
+import * as mine from "../src/providers/mine.js"
+import type { ArtProvider } from "../src/providers/types.js"
 import { FrameTV, type TV } from "../src/tv.js"
 
 const args = new Map(process.argv.slice(2).map((a, i, all) => [a, all[i + 1] ?? "true"]))
@@ -103,8 +103,172 @@ const museum = new Hono().get("/img/:file", async (c) => {
 })
 
 const base = `http://localhost:${port}`
+
+/**
+ * The fake seed is a small frame-art-collections: 72 works in themed collections that overlap,
+ * two AI-made works, and one live-search museum whose results partly duplicate the catalogue.
+ */
+const FAKE_WORKS = [
+  ["Gezicht op Delft", "Johannes Vermeer", 1660, "dutch"],
+  ["Water Lilies", "Claude Monet", 1906, "impressionism"],
+  ["The Harvesters", "Pieter Bruegel", 1565, "dutch"],
+  ["View of Haarlem", "Jacob van Ruisdael", 1670, "dutch"],
+  ["Stormy Sea", "Ludolf Backhuysen", 1690, "sea"],
+  ["Still Life with Flowers", "Rachel Ruysch", 1700, "flowers"],
+  ["Under the Wave off Kanagawa", "Katsushika Hokusai", 1830, "sea"],
+  ["Portrait of a Woman", "Frans Hals", 1640, "dutch"],
+  ["Poplars on the Epte", "Claude Monet", 1891, "impressionism"],
+  ["Winter Landscape", "Hendrick Avercamp", 1610, "dutch"],
+  ["The Beach at Scheveningen", "Hendrik Willem Mesdag", 1880, "sea"],
+  ["Composition", "Piet Mondriaan", 1921, "modern"],
+] as const
+const COLLECTIONS: Record<string, [string, string]> = {
+  dutch: ["Dutch Golden Age", "Vermeer, Ruisdael, Hals and Avercamp: light and everyday life in the Dutch Republic."],
+  impressionism: ["Impressionism", "Monet and his circle: light, weather and loose brushwork."],
+  sea: ["Seascapes", "Waves, beaches and harbours, from Dutch storms to Hokusai's great wave."],
+  flowers: ["Flowers and still life", "Bouquets and tabletops painted with almost scientific care."],
+  modern: ["Modern", "Early abstraction and the move away from the visible world."],
+  ai: ["AI dreams", "Open-licensed images made with generative AI models."],
+}
+const PALETTE_IDS = ["green", "blue", "gold", "red", "brown", "light", "dark"] as const
+const devImg = (i: number, w: number, h: number) => `${base}${PREFIX}/__museum/img/${i}_${w}x${h}.jpg`
+const devItems = Array.from({ length: 72 }, (_, i) => {
+  const [title, artist, year, theme] = FAKE_WORKS[i % FAKE_WORKS.length]!
+  const portrait = i % 5 === 3
+  const [w, h] = portrait ? [1500, 2000] : i % 4 === 0 ? [4200, 2360] : [3000, 2100]
+  return {
+    theme,
+    item: {
+      id: i % 9 === 0 ? `met-${1000 + i}` : `commons-dev${String(i).padStart(4, "0")}`,
+      title: i < FAKE_WORKS.length ? title : `${title} ${Math.floor(i / FAKE_WORKS.length) + 1}`,
+      artist,
+      year,
+      date: String(year),
+      image: devImg(i, w, h),
+      thumbnail: devImg(i, Math.round(w / 4), Math.round(h / 4)),
+      width: w,
+      height: h,
+      licence: "PD",
+      source: "Wikimedia Commons",
+      source_url: `https://commons.wikimedia.org/wiki/File:Dev_${i}.jpg`,
+      ai_generated: false,
+      tags: [PALETTE_IDS[i % PALETTE_IDS.length]!],
+    },
+  }
+})
+const aiItems = [0, 1].map((n) => ({
+  id: `commons-devai${n}`,
+  title: n ? "Misty Valley" : "Glass Forest",
+  artist: "Someone",
+  year: 2024,
+  image: devImg(100 + n, 3840, 2160),
+  thumbnail: devImg(100 + n, 960, 540),
+  width: 3840,
+  height: 2160,
+  licence: "CC-BY-SA-4.0",
+  attribution: "Someone, CC BY-SA 4.0, via Wikimedia Commons",
+  source: "Wikimedia Commons",
+  source_url: `https://commons.wikimedia.org/wiki/File:Dev_ai_${n}.jpg`,
+  ai_generated: true,
+}))
+const manifests = Object.fromEntries(
+  Object.entries(COLLECTIONS).map(([id, [title, description]]) => {
+    const items =
+      id === "ai"
+        ? aiItems
+        : devItems
+            // Monet's works are also seascapes now and then: collections overlap.
+            .filter((d) => d.theme === id || (id === "sea" && d.item.artist === "Claude Monet" && d.item.year === 1906))
+            .map((d) => d.item)
+    return [
+      id,
+      {
+        $schema: "https://dstollie.github.io/frame-art-collections/schema/collection.v1.schema.json",
+        schema_version: 1,
+        id,
+        title,
+        description,
+        tags: [id],
+        curator: { name: "Frame Art seed", github: "dstollie" },
+        cover: items[0]!.id,
+        items,
+      },
+    ]
+  }),
+)
+const communityApp = new Hono()
+communityApp.get("/index.json", (c) =>
+  c.json({
+    schema_version: 1,
+    generated_at: new Date().toISOString(),
+    totals: { collections: Object.keys(manifests).length, items: 0, unique_items: 0 },
+    collections: Object.values(manifests).map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      tags: m.tags,
+      curator: m.curator,
+      url: `${base}/__community/collections/${m.id}.json`,
+      count: m.items.length,
+      landscape_count: m.items.filter((i) => i.width > i.height).length,
+      uhd_count: m.items.filter((i) => Math.max(i.width, i.height) >= 3840).length,
+      ai_generated_count: m.items.filter((i) => i.ai_generated).length,
+      licences: {},
+      cover: {
+        id: m.items[0]!.id,
+        title: m.items[0]!.title,
+        artist: m.items[0]!.artist,
+        thumbnail: m.items[0]!.thumbnail,
+        width: m.items[0]!.width,
+        height: m.items[0]!.height,
+      },
+    })),
+  }),
+)
+communityApp.get("/collections/:file", (c) => {
+  const m = manifests[c.req.param("file").replace(/\.json$/, "")]
+  return m ? c.json(m) : c.notFound()
+})
+
+/** A live-search museum for the fake seed: two new works and one the catalogue already has (met-1009). */
+const devMuseum: ArtProvider = {
+  id: "met",
+  name: "The Metropolitan Museum of Art",
+  description: "Dev stack stand-in for the Met's live search.",
+  homepage: "https://www.metmuseum.org",
+  licence: "CC0",
+  defaultEnabled: true,
+  thumbnails: "direct",
+  downloadUrl: (a) => a.imageUrl,
+  search: async (q) =>
+    [
+      [1009, "Water Lilies 2", "Claude Monet", 1906],
+      [5001, "Bridge over a Pond", "Claude Monet", 1899],
+      [5002, "Cypresses", "Vincent van Gogh", 1889],
+    ]
+      .filter(([, title, artist]) => `${title} ${artist}`.toLowerCase().includes(q.toLowerCase().split(" ")[0]!))
+      .map(([id, title, artist, year]) =>
+        newArtwork({
+          id: `met:${id}`,
+          source: "met",
+          sourceId: String(id),
+          title: String(title),
+          artist: String(artist),
+          year: Number(year),
+          dateText: String(year),
+          licence: "CC0",
+          imageUrl: devImg(Number(id), 3200, 1800),
+          thumbUrl: devImg(Number(id) % 72, 800, 450),
+          pageUrl: `https://www.metmuseum.org/art/collection/search/${id}`,
+          aspect: 1.7778,
+          maxPx: 3200,
+        }),
+      ),
+}
+
 const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
   const u = String(url instanceof Request ? url.url : url)
+  if (u.startsWith(`${base}/__community/`)) return communityApp.request(u.replace(`${base}/__community`, ""))
   if (u.startsWith(`${base}/__museum/`)) return museum.request(u.replace(`${base}/__museum`, ""))
   if (u.startsWith(`${PREFIX}/__museum/`)) return museum.request(u.replace(`${PREFIX}/__museum`, ""))
   return fetch(url, init)
@@ -118,72 +282,27 @@ const { app, svc } = createApp({
   fetchFn,
   staticDir,
   auth: "open",
+  ...(seedMode === "fake" ? { communityBase: `${base}/__community`, providers: [mine.provider, devMuseum] } : {}),
 })
 
 async function seed() {
-  if (seedMode === "live") {
-    const arts: Artwork[] = []
-    for await (const a of cleveland.harvest(fetch, new Set(), { delayMs: 0 })) {
-      arts.push(a)
-      if (arts.length >= 600) break
-    }
-    let n = 0
-    for await (const a of rijks.harvest(fetch, new Set(), { delayMs: 50 })) {
-      arts.push(a)
-      if (++n >= 60) break
-    }
-    svc.store.upsertArtworks(arts)
+  const report = await svc.syncer.syncAll()
+  if (seedMode === "fake") {
+    // Colours the way the nightly enrichment would set them, without decoding 72 thumbnails.
+    devItems.forEach(({ item }, i) => {
+      const [r, g, b] = PALETTE[i % PALETTE.length]!
+      svc.store.setColor(
+        `community:${item.id}`,
+        `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`,
+        PALETTE_IDS[i % PALETTE_IDS.length]!,
+      )
+    })
+  } else {
     void (async () => {
       while ((await svc.syncer.enrichColors(40)) > 0);
     })()
-    return
   }
-  const titles = [
-    ["Gezicht op Delft", "Johannes Vermeer", 1660, "rijks"],
-    ["Water Lilies", "Claude Monet", 1906, "met"],
-    ["The Harvesters", "Pieter Bruegel", 1565, "met"],
-    ["View of Haarlem", "Jacob van Ruisdael", 1670, "met"],
-    ["Stormy Sea", "Ludolf Backhuysen", 1690, "rijks"],
-    ["Still Life with Flowers", "Rachel Ruysch", 1700, "cleveland"],
-    ["Under the Wave off Kanagawa", "Katsushika Hokusai", 1830, "met"],
-    ["Portrait of a Woman", "Frans Hals", 1640, "rijks"],
-    ["Poplars on the Epte", "Claude Monet", 1891, "met"],
-    ["Winter Landscape", "Hendrick Avercamp", 1610, "rijks"],
-    ["The Beach at Scheveningen", "Hendrik Willem Mesdag", 1880, "rijks"],
-    ["Composition", "Piet Mondriaan", 1921, "cleveland"],
-  ] as const
-  const arts: Artwork[] = []
-  for (let i = 0; i < 72; i++) {
-    const [title, artist, year, source] = titles[i % titles.length]!
-    const portrait = i % 5 === 3
-    const [w, h] = portrait ? [1500, 2000] : i % 4 === 0 ? [3200, 1800] : [3000, 2100]
-    arts.push(
-      newArtwork({
-        id: `${source}:${1000 + i}`,
-        source,
-        sourceId: String(1000 + i),
-        title: i < titles.length ? title : `${title} ${Math.floor(i / titles.length) + 1}`,
-        artist,
-        year,
-        dateText: String(year),
-        nationality: source === "rijks" ? "Dutch" : "",
-        culture: title.includes("Kanagawa") ? "Japan" : "",
-        imageUrl: `${base}/__museum/img/${i}_${w}x${h}.jpg`,
-        thumbUrl: `${PREFIX}/__museum/img/${i}_${Math.round(w / 4)}x${Math.round(h / 4)}.jpg`,
-        pageUrl: "https://example.org",
-        aspect: Math.round((w / h) * 10_000) / 10_000,
-      }),
-    )
-  }
-  svc.store.upsertArtworks(arts)
-  arts.forEach((a, i) => {
-    const [r, g, b] = PALETTE[i % PALETTE.length]!
-    svc.store.setColor(
-      a.id,
-      `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`,
-      ["groen", "blauw", "goud", "rood", "bruin", "licht", "donker"][i % 7]!,
-    )
-  })
+  console.log(`dev stack: catalogue ${JSON.stringify(report)}`)
 }
 await seed()
 

@@ -53,7 +53,7 @@ export class Sources {
       homepage: p.homepage,
       licence: p.licence,
       enabled,
-      local: !p.harvest,
+      local: !p.search,
       apiKey: p.apiKey ? { required: p.apiKey.required, helpUrl: p.apiKey.helpUrl, set: Boolean(apiKey) } : null,
       count: counts[p.id] ?? 0,
     }))

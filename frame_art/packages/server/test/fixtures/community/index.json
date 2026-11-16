@@ -1,0 +1,67 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-11-15T22:37:01.983Z",
+ "totals": {
+  "collections": 2,
+  "items": 9,
+  "unique_items": 7
+ },
+ "collections": [
+  {
+   "id": "impressionism-test",
+   "title": "Impressionism test",
+   "description": "Impressionism test: a small test collection for Frame Art.",
+   "tags": [
+    "test"
+   ],
+   "curator": {
+    "name": "Frame Art seed",
+    "github": "dstollie"
+   },
+   "url": "https://dstollie.github.io/frame-art-collections/collections/impressionism-test.json",
+   "count": 6,
+   "landscape_count": 6,
+   "uhd_count": 5,
+   "ai_generated_count": 1,
+   "licences": {
+    "PD": 6
+   },
+   "cover": {
+    "id": "wikidata-Q1",
+    "title": "Water Lilies",
+    "artist": "Claude Monet",
+    "thumbnail": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Claude_Monet_-_Water_Lilies.jpg/960px-Claude_Monet_-_Water_Lilies.jpg",
+    "width": 6000,
+    "height": 4000
+   }
+  },
+  {
+   "id": "moods-test",
+   "title": "Moods test",
+   "description": "Moods test: a small test collection for Frame Art.",
+   "tags": [
+    "test"
+   ],
+   "curator": {
+    "name": "Frame Art seed",
+    "github": "dstollie"
+   },
+   "url": "https://dstollie.github.io/frame-art-collections/collections/moods-test.json",
+   "count": 3,
+   "landscape_count": 3,
+   "uhd_count": 2,
+   "ai_generated_count": 0,
+   "licences": {
+    "PD": 3
+   },
+   "cover": {
+    "id": "wikidata-Q4",
+    "title": "Blue Hour",
+    "artist": "Peder M\u00f8nsted",
+    "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Blue_hour.jpg",
+    "width": 3000,
+    "height": 2000
+   }
+  }
+ ]
+}

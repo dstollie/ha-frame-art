@@ -1,7 +1,7 @@
 /** Art Institute of Chicago: public API + IIIF. Images need an AIC-User-Agent header (Cloudflare). */
 import { newArtwork, type Artwork } from "../models.js"
-import { USER_AGENT, getJson, round4, sleep } from "./http.js"
-import type { ArtProvider, HarvestContext } from "./types.js"
+import { USER_AGENT, getJson, round4 } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const SEARCH = "https://api.artic.edu/api/v1/artworks/search"
 const IIIF = "https://www.artic.edu/iiif/2"
@@ -71,42 +71,24 @@ export function parseItem(item: AicItem): Artwork | null {
   })
 }
 
-/** Search pages by id (search_after style): the API refuses deep offset paging. */
-export function searchBody(afterId: number) {
+/** Live search over public-domain works with an image. */
+export function searchBody(q: string, limit: number) {
   return {
-    query: {
-      bool: {
-        must: [
-          { term: { is_public_domain: true } },
-          { term: { "artwork_type_title.keyword": "Painting" } },
-          { range: { id: { gt: afterId } } },
-        ],
-      },
-    },
-    sort: [{ id: "asc" }],
-    limit: 100,
+    q,
+    query: { bool: { must: [{ term: { is_public_domain: true } }, { exists: { field: "image_id" } }] } },
+    limit,
     fields: FIELDS,
   }
 }
 
-async function* harvest(ctx: HarvestContext): AsyncGenerator<Artwork> {
-  let after = 0
-  for (;;) {
-    const page = await getJson<{ data?: AicItem[] }>(
-      ctx.fetch,
-      SEARCH,
-      { ...HEADERS, "Content-Type": "application/json" },
-      { method: "POST", body: JSON.stringify(searchBody(after)) },
-    )
-    const data = page?.data ?? []
-    for (const item of data) {
-      const art = parseItem(item)
-      if (art && !ctx.known.has(art.id)) yield art
-    }
-    if (data.length < 100) return
-    after = data.at(-1)!.id
-    await sleep(ctx.delayMs ?? 1000)
-  }
+async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const page = await getJson<{ data?: AicItem[] }>(
+    ctx.fetch,
+    SEARCH,
+    { ...HEADERS, "Content-Type": "application/json" },
+    { method: "POST", body: JSON.stringify(searchBody(q, ctx.limit)) },
+  )
+  return (page?.data ?? []).flatMap((item) => parseItem(item) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -118,6 +100,6 @@ export const provider: ArtProvider = {
   defaultEnabled: true,
   thumbnails: "proxy",
   imageHeaders: HEADERS,
-  harvest,
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

@@ -58,29 +58,42 @@ export function createMcpServer(svc: Services): McpServer {
     {
       title: "Search art",
       description:
-        "Search the Frame Art catalogue (open-access paintings from museums, plus the user's own collection). " +
-        "Returns works with an id you can pass to show_artwork.",
+        "Search the Frame Art catalogue (the community collections; typo-tolerant text search over title, artist, tags, " +
+        "collection and date) or the user's own collection. Returns works with an id you can pass to show_artwork.",
       inputSchema: {
-        query: z.string().optional().describe("Words in title, artist or date, e.g. 'monet water lilies'"),
+        query: z
+          .string()
+          .optional()
+          .describe("Words in title, artist, tags, collection or date, e.g. 'monet water lilies'"),
+        collection: z.string().optional().describe("Collection id (see list_sources)"),
+        century: z.number().int().optional().describe("Start year of a century, e.g. 1800 for the 19th"),
+        artist: z.string().optional().describe("Exact artist name"),
         category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).optional(),
         color: z.enum(COLOR_FAMILIES).optional(),
-        source: z.string().optional().describe("Provider id, e.g. met, aic, rijks, smk, mine (see list_sources)"),
+        uhd: z.boolean().optional().describe("Only works of at least 3840 px"),
+        ai_generated: z.boolean().optional(),
+        own_collection: z.boolean().optional().describe("Search My collection instead of the catalogue"),
         landscape_only: z.boolean().optional().describe("Only works that suit a landscape TV (default true)"),
         limit: z.number().int().min(1).max(25).optional(),
       },
     },
     async (args) => {
-      const { items, total } = svc.store.query({
+      const { items, total, fuzzy } = svc.store.query({
         q: args.query ?? null,
         category: args.category ?? null,
         color: args.color ?? null,
-        source: args.source ?? null,
-        sources: args.source ? undefined : svc.sources.enabledIds(),
-        landscape: args.landscape_only ?? true,
+        catalogue: !args.own_collection,
+        mine: Boolean(args.own_collection),
+        collections: args.collection ? [args.collection] : [],
+        centuries: args.century === undefined ? [] : [args.century],
+        artist: args.artist ?? null,
+        uhd: args.uhd ?? null,
+        ai: args.ai_generated ?? null,
+        orient: (args.landscape_only ?? true) ? "landscape" : null,
         limit: args.limit ?? 10,
         seed: Math.floor(Date.now() / 86_400_000),
       })
-      return text({ total, items: items.map(summary) })
+      return text({ total, close_matches_only: fuzzy, items: items.map(summary) })
     },
   )
 
@@ -88,14 +101,19 @@ export function createMcpServer(svc: Services): McpServer {
     "list_sources",
     {
       title: "List art sources",
-      description: "The art providers (museums, Wikimedia, My collection), whether they're on, and the categories.",
+      description:
+        "The catalogue's collections (from frame-art-collections, on or off), the museums available for live search, categories and colours.",
       inputSchema: {},
     },
     async () =>
       text({
-        sources: svc.sources
+        collections: svc.catalogue
+          .collections()
+          .map(({ id, title, count, enabled, aiCount }) => ({ id, title, count, enabled, ai_generated: aiCount })),
+        live_search: svc.sources
           .toDTO()
-          .map(({ id, name, licence, enabled, count }) => ({ id, name, licence, enabled, count })),
+          .filter((s) => !s.local)
+          .map(({ id, name, licence, enabled }) => ({ id, name, licence, enabled })),
         categories: CATEGORIES.map((c) => ({ id: c.id, name: c.en })),
         colors: COLOR_FAMILIES,
       }),
@@ -374,6 +392,84 @@ export function createMcpServer(svc: Services): McpServer {
       if (!svc.tvs.has(tv)) return fail(`Unknown TV ${tv}`)
       if (!(await svc.player.control(tv, action))) return fail("No series is playing on this TV")
       return text(svc.player.state(tv) ?? { status: "stopped" })
+    },
+  )
+
+  server.registerTool(
+    "search_museums",
+    {
+      title: "Search museums live",
+      description:
+        "Search the museums' own APIs (the Met, AIC, SMK, Cleveland, Rijksmuseum, Wikimedia, …) for works that aren't in the catalogue. " +
+        "Nothing is stored; each result says whether the catalogue already has it. Use save_museum_work to keep one.",
+      inputSchema: {
+        query: z.string().min(2),
+        source: z.string().optional().describe("Only this museum (id from list_sources)"),
+        limit: z.number().int().min(1).max(20).optional(),
+      },
+    },
+    async ({ query, source, limit }) => {
+      const groups = await svc.live.search(query, { ...(source ? { only: source } : {}), limit: limit ?? 8 })
+      return text(
+        groups.map((g) => ({
+          source: g.id,
+          error: g.error,
+          results: g.results.map((r) => ({ ...summary(r.art), in_catalogue: r.inCatalogue, saved: r.saved })),
+        })),
+      )
+    },
+  )
+
+  server.registerTool(
+    "save_museum_work",
+    {
+      title: "Save a museum work",
+      description: "Keep a live-search result in My collection, so it can be shown on a TV or put in a series.",
+      inputSchema: { artwork_id: z.string().describe("Id from search_museums, e.g. met:436535") },
+    },
+    async ({ artwork_id }) => {
+      const art = svc.live.save(artwork_id)
+      return art ? text(summary(art)) : fail("Unknown or expired result; search again")
+    },
+  )
+
+  server.registerTool(
+    "share_collection",
+    {
+      title: "Share works as a community collection",
+      description:
+        "Turn catalogue works (e.g. a series or album) into a collection.v1 manifest and a pre-filled GitHub issue link for frame-art-collections. Own uploads are never shared.",
+      inputSchema: {
+        id: z.string().describe("kebab-case slug"),
+        title: z.string(),
+        description: z.string().describe("20–600 characters"),
+        tags: z.array(z.string()),
+        curator_name: z.string(),
+        curator_github: z.string().optional(),
+        artwork_ids: z.array(z.string()).optional(),
+        series_id: z.string().optional(),
+        album_id: z.string().optional(),
+      },
+    },
+    async (a) => {
+      const ids = [
+        ...(a.artwork_ids ?? []),
+        ...(a.series_id ? svc.series.itemIds(a.series_id) : []),
+        ...(a.album_id ? svc.store.query({ album: a.album_id, limit: 1000 }).items.map((x) => x.id) : []),
+      ]
+      try {
+        const r = svc.shareCollection({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          tags: a.tags,
+          curator: { name: a.curator_name, ...(a.curator_github ? { github: a.curator_github } : {}) },
+          artworkIds: [...new Set(ids)],
+        })
+        return text(r)
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e))
+      }
     },
   )
 

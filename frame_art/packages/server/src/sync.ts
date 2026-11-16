@@ -1,4 +1,5 @@
-/** Catalogue sync (nightly + on demand) and slow colour enrichment from thumbnails. */
+/** Catalogue sync from the community collections (nightly + on demand) and slow colour enrichment. */
+import type { Catalogue, SyncReport } from "./community.js"
 import type { Store } from "./db.js"
 import type { Artwork } from "./models.js"
 import { USER_AGENT, sleep, type Fetch } from "./providers/http.js"
@@ -19,10 +20,10 @@ export class Syncer {
   constructor(
     private readonly store: Store,
     private readonly sources: Sources,
+    private readonly catalogue: Catalogue,
     private readonly fetchFn: Fetch = fetch,
     private readonly opts: {
       colorDelayMs?: number
-      harvestDelayMs?: number
       /** Thumbnail bytes for colour analysis; defaults to fetching `thumbUrl`. */
       thumb?: (art: Artwork) => Promise<Buffer>
     } = {},
@@ -38,6 +39,7 @@ export class Syncer {
       lastRun: this.store.getMeta("last_sync"),
       total: this.store.count(),
       withColor: this.store.countWithColor(),
+      collections: this.catalogue.collections().length,
     }
   }
 
@@ -47,37 +49,21 @@ export class Syncer {
     return true
   }
 
-  async syncAll(): Promise<void> {
-    if (this.running) return
+  /** Brings the catalogue in line with frame-art-collections. */
+  async syncAll(): Promise<SyncReport | null> {
+    if (this.running) return null
     this.status = { state: "running", source: null, added: 0, error: null }
     try {
-      for (const { provider, apiKey } of this.sources.list().filter((s) => s.enabled && s.provider.harvest)) {
-        if (this.stopped) return
-        const name = provider.id
-        this.status.source = name
-        let batch: Artwork[] = []
-        try {
-          const delay = this.opts.harvestDelayMs
-          for await (const art of provider.harvest!({
-            fetch: this.fetchFn,
-            known: this.store.knownIds(name),
-            apiKey,
-            ...(delay != null ? { delayMs: delay } : {}),
-          })) {
-            batch.push(art)
-            if (batch.length >= 50) {
-              this.status.added += this.store.upsertArtworks(batch)
-              batch = []
-            }
-            if (this.stopped) break
-          }
-        } catch (e) {
-          // One museum down must not stop the others.
-          this.status.error = `${name}: ${e instanceof Error ? e.message : String(e)}`
-        }
-        if (batch.length) this.status.added += this.store.upsertArtworks(batch)
-      }
+      const report = await this.catalogue.sync((collection, works) => {
+        this.status.source = collection
+        this.status.added = works
+      })
+      if (report.migrated) console.log(`catalogue: moved to the community collections`, JSON.stringify(report.migrated))
       this.store.setMeta("last_sync", new Date().toISOString())
+      return report
+    } catch (e) {
+      this.status.error = e instanceof Error ? e.message : String(e)
+      return null
     } finally {
       this.status.state = "idle"
       this.status.source = null
@@ -112,7 +98,9 @@ export class Syncer {
 
   /** Background loop: sync on start (or when empty), nightly at syncHour, colours in between. */
   async loop(syncHour: number, syncOnStart: boolean): Promise<void> {
-    if (syncOnStart || this.store.count() === 0) await this.syncAll()
+    // The first start after 0.4.0 moves the catalogue to the community collections.
+    const moved = this.store.getMeta("catalogue_source") === "community"
+    if (syncOnStart || !moved || this.store.count() === 0) await this.syncAll()
     let lastDay = new Date().toDateString()
     while (!this.stopped) {
       const now = new Date()

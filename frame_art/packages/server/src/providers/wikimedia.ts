@@ -1,7 +1,7 @@
 /** Wikimedia Commons: the public-domain paintings Google Arts & Culture digitised in high resolution. */
 import { newArtwork, type Artwork } from "../models.js"
-import { firstYear, getJson, round4, sleep } from "./http.js"
-import type { ArtProvider, HarvestContext } from "./types.js"
+import { firstYear, getJson, round4 } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const API = "https://commons.wikimedia.org/w/api.php"
 const CATEGORY = "Category:Google_Art_Project_paintings"
@@ -63,39 +63,29 @@ export function parsePage(page: Page): Artwork | null {
   })
 }
 
-export function pageUrl(cont: string | null): string {
+/** Live search among the Google Art Project paintings. */
+export function searchUrl(q: string, limit: number): string {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
     formatversion: "2",
-    generator: "categorymembers",
-    gcmtitle: CATEGORY,
-    gcmtype: "file",
-    gcmlimit: "50",
+    generator: "search",
+    gsrnamespace: "6",
+    gsrsearch: `${q} incategory:${CATEGORY.replace("Category:", "")}`,
+    gsrlimit: String(limit),
     prop: "imageinfo",
     iiprop: "url|size|extmetadata",
     iiurlwidth: "800",
     iiextmetadatafilter: "LicenseShortName|Artist|DateTimeOriginal",
   })
-  if (cont) params.set("gcmcontinue", cont)
   return `${API}?${params}`
 }
 
-async function* harvest(ctx: HarvestContext): AsyncGenerator<Artwork> {
-  let cont: string | null = null
-  do {
-    const page: { query?: { pages?: Page[] }; continue?: { gcmcontinue?: string } } | null = await getJson(
-      ctx.fetch,
-      pageUrl(cont),
-    )
-    for (const p of page?.query?.pages ?? []) {
-      if (ctx.known.has(`wikimedia:${p.pageid}`)) continue
-      const art = parsePage(p)
-      if (art) yield art
-    }
-    cont = page?.continue?.gcmcontinue ?? null
-    await sleep(ctx.delayMs ?? 1000)
-  } while (cont)
+async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const page = await getJson<{ query?: { pages?: (Page & { index?: number })[] } }>(ctx.fetch, searchUrl(q, ctx.limit))
+  return (page?.query?.pages ?? [])
+    .toSorted((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .flatMap((p) => parsePage(p) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -106,6 +96,6 @@ export const provider: ArtProvider = {
   licence: "Public domain",
   defaultEnabled: true,
   thumbnails: "direct",
-  harvest,
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

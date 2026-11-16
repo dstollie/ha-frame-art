@@ -15,7 +15,7 @@ import { createApp, type Services } from "../src/app.js"
 import { paths, type Settings } from "../src/config.js"
 import type { HomeAssistant } from "../src/ha.js"
 import { FrameTV, type TV } from "../src/tv.js"
-import { art, jpeg, tempSettings } from "./helpers.js"
+import { art, inCatalogue, jpeg, tempSettings } from "./helpers.js"
 
 let frame: FakeFrame
 let settings: Settings
@@ -60,6 +60,7 @@ async function boot(auth: "addon" | "open" = "addon") {
     art("met:1", { title: "Water Lilies", aspect: 1.5 }),
     art("rijks:2", { title: "Gezicht op Delft", year: 1660, aspect: 1.3 }),
   ])
+  inCatalogue(svc.store, ["met:1", "rijks:2"])
   await svc.tvs.get("woonkamer")!.pair()
 }
 
@@ -172,19 +173,23 @@ describe("My collection", () => {
     expect(bad.status).toBe(400)
   })
 
-  it("turns sources on and off in Settings and the catalogue follows", async () => {
+  it("turns a live-search museum off without touching the catalogue", async () => {
     await boot("open")
     const ids = async () =>
-      ((await (await app.request("/api/artworks")).json()) as { items: { id: string }[] }).items
+      ((await (await app.request("/api/artworks?orient=all")).json()) as { items: { id: string }[] }).items
         .map((i) => i.id)
         .toSorted()
+    const live = async () =>
+      ((await (await app.request("/api/config")).json()) as { live: { id: string }[] }).live.map((l) => l.id)
     expect(await ids()).toEqual(["met:1", "rijks:2"])
+    expect(await live()).toContain("rijks")
     await app.request("/api/settings/sources/rijks", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ enabled: false }),
     })
-    expect(await ids()).toEqual(["met:1"])
+    expect(await live()).not.toContain("rijks")
+    expect(await ids()).toEqual(["met:1", "rijks:2"])
   })
 })
 
@@ -214,7 +219,10 @@ describe("MCP", () => {
       "list_sources",
       "list_tvs",
       "play_series",
+      "save_museum_work",
       "search_art",
+      "search_museums",
+      "share_collection",
       "show_artwork",
       "update_series",
       "upload_image",

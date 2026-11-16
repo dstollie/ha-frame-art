@@ -22,6 +22,8 @@ export interface Artwork {
   pageUrl: string
   /** "CC0", "Public domain", or a licence URL; empty when the provider decides. */
   licence: string
+  /** Credit line the licence asks for (CC BY / BY-SA); empty for CC0 and public domain. */
+  attribution: string
   aspect: number | null // width / height
   maxPx: number | null
   categories: string[]
@@ -44,6 +46,7 @@ export function newArtwork(a: Pick<Artwork, "id" | "source" | "sourceId" | "titl
     thumbUrl: "",
     pageUrl: "",
     licence: "",
+    attribution: "",
     aspect: null,
     maxPx: null,
     categories: [],
@@ -53,6 +56,9 @@ export function newArtwork(a: Pick<Artwork, "id" | "source" | "sourceId" | "titl
     ...a,
   }
 }
+
+/** Tag on works made with generative AI. */
+export const AI_TAG = "ai-generated"
 
 export const FILL_MIN = 1.5
 export const FILL_MAX = 2.1
@@ -71,6 +77,9 @@ export interface ArtworkDTO {
   medium: string
   department: string
   licence: string
+  attribution: string
+  /** Made with a generative AI model. */
+  ai: boolean
   /** Direct image URL for the browser, or null when `thumbPath` must be used. */
   thumb: string | null
   /** API path (relative to the API base) for thumbnails the add-on serves itself. */
@@ -96,6 +105,8 @@ export function toDTO(a: Artwork, favourite: boolean, thumbPath: string | null =
     medium: a.medium,
     department: a.department,
     licence: a.licence,
+    attribution: a.attribution,
+    ai: a.tags.includes(AI_TAG),
     thumb: thumbPath ? null : a.thumbUrl,
     thumbPath,
     page: a.pageUrl,

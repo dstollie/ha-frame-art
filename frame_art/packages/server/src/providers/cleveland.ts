@@ -1,9 +1,8 @@
 import { newArtwork, type Artwork } from "../models.js"
-import { getJson, sleep, type Fetch } from "./http.js"
-import type { ArtProvider } from "./types.js"
+import { getJson } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const BASE = "https://openaccess-api.clevelandart.org/api/artworks/"
-const PAGE = 500
 
 interface CmaImage {
   url: string
@@ -62,28 +61,10 @@ export function parseItem(item: CmaItem): Artwork | null {
   })
 }
 
-export async function* harvest(
-  fetchFn: Fetch,
-  known: Set<string>,
-  opts: { delayMs?: number } = {},
-): AsyncGenerator<Artwork> {
-  for (let skip = 0; ; skip += PAGE) {
-    const params = new URLSearchParams({
-      type: "Painting",
-      cc0: "1",
-      has_image: "1",
-      limit: String(PAGE),
-      skip: String(skip),
-    })
-    const page = await getJson<{ data?: CmaItem[] }>(fetchFn, `${BASE}?${params}`)
-    const data = page?.data ?? []
-    for (const item of data) {
-      const art = parseItem(item)
-      if (art && !known.has(art.id)) yield art
-    }
-    if (data.length < PAGE) return
-    await sleep(opts.delayMs ?? 500)
-  }
+export async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  const params = new URLSearchParams({ q, cc0: "1", has_image: "1", limit: String(ctx.limit) })
+  const page = await getJson<{ data?: CmaItem[] }>(ctx.fetch, `${BASE}?${params}`)
+  return (page?.data ?? []).flatMap((item) => parseItem(item) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -94,6 +75,6 @@ export const provider: ArtProvider = {
   licence: "CC0",
   defaultEnabled: true,
   thumbnails: "direct",
-  harvest: (ctx) => harvest(ctx.fetch, ctx.known, ctx.delayMs == null ? {} : { delayMs: ctx.delayMs }),
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

@@ -1,0 +1,110 @@
+{
+ "$schema": "https://dstollie.github.io/frame-art-collections/schema/collection.v1.schema.json",
+ "schema_version": 1,
+ "id": "impressionism-test",
+ "title": "Impressionism test",
+ "description": "Impressionism test: a small test collection for Frame Art.",
+ "tags": [
+  "test"
+ ],
+ "curator": {
+  "name": "Frame Art seed",
+  "github": "dstollie"
+ },
+ "cover": "wikidata-Q1",
+ "items": [
+  {
+   "id": "wikidata-Q1",
+   "title": "Water Lilies",
+   "artist": "Claude Monet",
+   "year": 1906,
+   "image": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Claude_Monet_-_Water_Lilies.jpg",
+   "image_4k": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Claude_Monet_-_Water_Lilies.jpg/3840px-Claude_Monet_-_Water_Lilies.jpg",
+   "thumbnail": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Claude_Monet_-_Water_Lilies.jpg/960px-Claude_Monet_-_Water_Lilies.jpg",
+   "width": 6000,
+   "height": 4000,
+   "licence": "PD",
+   "source": "Wikimedia Commons",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Claude_Monet_-_Water_Lilies.jpg",
+   "ai_generated": false
+  },
+  {
+   "id": "smk-KMS1",
+   "title": "Danish Coast",
+   "artist": "C.W. Eckersberg",
+   "year": 1830,
+   "image": "https://api.smk.dk/api/v1/download/KMS1",
+   "iiif": "https://iip.smk.dk/iiif/jp2/kms1",
+   "thumbnail": "https://iip.smk.dk/iiif/jp2/kms1/full/!1024,/0/default.jpg",
+   "width": 5000,
+   "height": 3000,
+   "licence": "CC0-1.0",
+   "source": "SMK \u2013 Statens Museum for Kunst",
+   "source_url": "https://open.smk.dk/artwork/image/KMS1",
+   "ai_generated": false
+  },
+  {
+   "id": "wikidata-Q2",
+   "title": "Field of Poppies",
+   "artist": "Claude Monet",
+   "year": 1873,
+   "image": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Poppies_Met_scan.jpg",
+   "image_4k": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Poppies_Met_scan.jpg/3840px-Poppies_Met_scan.jpg",
+   "thumbnail": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Poppies_Met_scan.jpg/960px-Poppies_Met_scan.jpg",
+   "width": 6000,
+   "height": 4000,
+   "licence": "PD",
+   "source": "Metropolitan Museum of Art via Wikimedia Commons",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Poppies_Met_scan.jpg",
+   "ai_generated": false
+  },
+  {
+   "id": "wikidata-Q3",
+   "title": "Haystacks",
+   "artist": "Claude Monet",
+   "year": 1891,
+   "image": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Haystacks_snow.jpg",
+   "image_4k": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Haystacks_snow.jpg/3840px-Haystacks_snow.jpg",
+   "thumbnail": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Haystacks_snow.jpg/960px-Haystacks_snow.jpg",
+   "width": 6000,
+   "height": 4000,
+   "licence": "PD",
+   "source": "Wikimedia Commons",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Haystacks_snow.jpg",
+   "ai_generated": false
+  },
+  {
+   "id": "commons-abc123def456",
+   "title": "Misty valley (AI)",
+   "artist": "Someone",
+   "year": 2024,
+   "image": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Misty_valley.png",
+   "image_4k": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cd/Misty_valley.png/3840px-Misty_valley.png",
+   "thumbnail": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cd/Misty_valley.png/960px-Misty_valley.png",
+   "width": 4000,
+   "height": 2250,
+   "licence": "CC-BY-SA-4.0",
+   "attribution": "Someone, CC BY-SA 4.0, via Wikimedia Commons",
+   "source": "Wikimedia Commons",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Misty_valley.png",
+   "ai_generated": true,
+   "tags": [
+    "landscape"
+   ]
+  },
+  {
+   "id": "smk-KMS9",
+   "title": "Winter Evening",
+   "artist": "J.Th. Lundbye",
+   "year": 1840,
+   "image": "https://api.smk.dk/api/v1/download/KMS9",
+   "iiif": "https://iip.smk.dk/iiif/jp2/kms9",
+   "width": 4200,
+   "height": 2800,
+   "licence": "PD",
+   "source": "SMK \u2013 Statens Museum for Kunst",
+   "source_url": "https://open.smk.dk/artwork/image/KMS9",
+   "ai_generated": false
+  }
+ ]
+}

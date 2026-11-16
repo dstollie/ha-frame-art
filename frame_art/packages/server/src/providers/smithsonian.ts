@@ -1,10 +1,9 @@
 /** Smithsonian American Art Museum through the Smithsonian Open Access API. Needs a free api.data.gov key. */
 import { newArtwork, type Artwork } from "../models.js"
-import { firstYear, getJson, round4, sleep } from "./http.js"
-import type { ArtProvider, HarvestContext } from "./types.js"
+import { firstYear, getJson, round4 } from "./http.js"
+import type { ArtProvider, SearchContext } from "./types.js"
 
 const SEARCH = "https://api.si.edu/openaccess/api/v1.0/category/art_design/search"
-const ROWS = 100
 
 interface Labeled {
   label?: string
@@ -58,23 +57,15 @@ export function parseRow(row: Row): Artwork | null {
   })
 }
 
-export function searchUrl(key: string, start: number): string {
-  const q = "painting AND unit_code:SAAM AND online_media_type:Images"
-  return `${SEARCH}?q=${encodeURIComponent(q)}&rows=${ROWS}&start=${start}&api_key=${encodeURIComponent(key)}`
+export function searchUrl(key: string, q: string, rows: number): string {
+  const query = `${q} AND unit_code:SAAM AND online_media_type:Images`
+  return `${SEARCH}?q=${encodeURIComponent(query)}&rows=${rows}&start=0&api_key=${encodeURIComponent(key)}`
 }
 
-async function* harvest(ctx: HarvestContext): AsyncGenerator<Artwork> {
-  if (!ctx.apiKey) return
-  for (let start = 0; ; start += ROWS) {
-    const page = await getJson<{ response?: { rows?: Row[] } }>(ctx.fetch, searchUrl(ctx.apiKey, start))
-    const rows = page?.response?.rows ?? []
-    for (const row of rows) {
-      const art = parseRow(row)
-      if (art && !ctx.known.has(art.id)) yield art
-    }
-    if (rows.length < ROWS) return
-    await sleep(ctx.delayMs ?? 1000)
-  }
+async function search(q: string, ctx: SearchContext): Promise<Artwork[]> {
+  if (!ctx.apiKey) return []
+  const page = await getJson<{ response?: { rows?: Row[] } }>(ctx.fetch, searchUrl(ctx.apiKey, q, ctx.limit))
+  return (page?.response?.rows ?? []).flatMap((row) => parseRow(row) ?? [])
 }
 
 export const provider: ArtProvider = {
@@ -86,6 +77,6 @@ export const provider: ArtProvider = {
   defaultEnabled: false,
   apiKey: { required: true, helpUrl: "https://api.data.gov/signup/" },
   thumbnails: "direct",
-  harvest,
+  search,
   downloadUrl: (art) => art.imageUrl,
 }

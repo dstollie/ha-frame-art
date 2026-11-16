@@ -24,6 +24,7 @@ export const artworks = sqliteTable("artworks", {
   thumbUrl: text("thumb_url").notNull(),
   pageUrl: text("page_url").notNull().default(""),
   licence: text("licence").notNull().default(""),
+  attribution: text("attribution").notNull().default(""),
   aspect: real("aspect"),
   maxPx: integer("max_px"),
   categories: text("categories").notNull().default(","), // ",a,b," for LIKE '%,a,%'
@@ -83,6 +84,43 @@ export const albumItems = sqliteTable(
   (t) => [primaryKey({ columns: [t.albumId, t.artworkId] })],
 )
 
+export const communityCollections = sqliteTable("community_collections", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  tags: text("tags", { mode: "json" }).$type<string[]>().notNull(),
+  curator: text("curator").notNull().default(""),
+  count: integer("count").notNull().default(0),
+  landscapeCount: integer("landscape_count").notNull().default(0),
+  uhdCount: integer("uhd_count").notNull().default(0),
+  aiCount: integer("ai_count").notNull().default(0),
+  coverId: text("cover_id"),
+  position: integer("position").notNull().default(0),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+})
+
+export const communityItems = sqliteTable(
+  "community_items",
+  {
+    collectionId: text("collection_id").notNull(),
+    itemId: text("item_id").notNull(),
+    artworkId: text("artwork_id").notNull(),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.collectionId, t.itemId] })],
+)
+
+export const communityRaw = sqliteTable("community_raw", {
+  itemId: text("item_id").primaryKey(),
+  json: text("json").notNull(),
+})
+
+/** Live-search works saved to My collection (they're not part of the catalogue). */
+export const saved = sqliteTable("saved", {
+  artworkId: text("artwork_id").primaryKey(),
+  addedAt: real("added_at").notNull(),
+})
+
 export const meta = sqliteTable("meta", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -94,6 +132,7 @@ CREATE TABLE IF NOT EXISTS artworks (
   artist TEXT NOT NULL DEFAULT '', nationality TEXT NOT NULL DEFAULT '', date_text TEXT NOT NULL DEFAULT '',
   year INTEGER, department TEXT NOT NULL DEFAULT '', culture TEXT NOT NULL DEFAULT '', medium TEXT NOT NULL DEFAULT '',
   tags TEXT NOT NULL DEFAULT '[]', image_url TEXT NOT NULL, thumb_url TEXT NOT NULL, page_url TEXT NOT NULL DEFAULT '',
+  licence TEXT NOT NULL DEFAULT '', attribution TEXT NOT NULL DEFAULT '',
   aspect REAL, max_px INTEGER, categories TEXT NOT NULL DEFAULT ',', color_hex TEXT, color_family TEXT,
   hidden INTEGER NOT NULL DEFAULT 0, search TEXT NOT NULL DEFAULT '', added_at REAL NOT NULL
 );
@@ -111,6 +150,22 @@ CREATE TABLE IF NOT EXISTS history (
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS source_settings (id TEXT PRIMARY KEY, enabled INTEGER NOT NULL, api_key TEXT);
 CREATE TABLE IF NOT EXISTS albums (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS community_collections (
+  id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', tags TEXT NOT NULL DEFAULT '[]',
+  curator TEXT NOT NULL DEFAULT '', count INTEGER NOT NULL DEFAULT 0, landscape_count INTEGER NOT NULL DEFAULT 0,
+  uhd_count INTEGER NOT NULL DEFAULT 0, ai_count INTEGER NOT NULL DEFAULT 0, cover_id TEXT,
+  position INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS community_items (
+  collection_id TEXT NOT NULL, item_id TEXT NOT NULL, artwork_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (collection_id, item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_community_items_artwork ON community_items(artwork_id);
+CREATE TABLE IF NOT EXISTS community_raw (item_id TEXT PRIMARY KEY, json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS saved (artwork_id TEXT PRIMARY KEY, added_at REAL NOT NULL);
+CREATE VIRTUAL TABLE IF NOT EXISTS artworks_fts USING fts5(
+  id UNINDEXED, title, artist, extra, tokenize = "trigram remove_diacritics 1"
+);
 CREATE TABLE IF NOT EXISTS album_items (
   album_id TEXT NOT NULL, artwork_id TEXT NOT NULL, added_at REAL NOT NULL, PRIMARY KEY (album_id, artwork_id)
 );
@@ -119,6 +174,11 @@ CREATE TABLE IF NOT EXISTS album_items (
 /** "Liggend": wide enough for a landscape Frame, but no 4:1 handscrolls that end up as a sliver. */
 export const LANDSCAPE_MIN = 1.2
 export const LANDSCAPE_MAX = 2.8
+
+const IN_ENABLED = sql`(SELECT ci.artwork_id FROM community_items ci JOIN community_collections cc ON cc.id = ci.collection_id WHERE cc.enabled = 1)`
+const ORIENT_SQL = sql`(CASE WHEN ${artworks.aspect} IS NULL OR ${artworks.aspect} >= 1.2 THEN 'landscape' WHEN ${artworks.aspect} < 0.9 THEN 'portrait' ELSE 'square' END)`
+const CENTURY_SQL = sql`(CASE WHEN ${artworks.year} IS NULL THEN -1 WHEN ${artworks.year} < 0 THEN ((${artworks.year} - 99) / 100) * 100 ELSE (${artworks.year} / 100) * 100 END)`
+const AI_SQL = sql`(${artworks.tags} LIKE '%"ai-generated"%')`
 
 export interface Query {
   category?: string | null
@@ -133,6 +193,52 @@ export interface Query {
   /** Only these providers (the enabled ones); empty means none. */
   sources?: string[] | undefined
   album?: string | null
+  /** Only works in an enabled community collection (Explore). */
+  catalogue?: boolean
+  /** My collection: own uploads plus works saved from live search. */
+  mine?: boolean
+  collections?: string[]
+  /** Start years of centuries, e.g. 1800 for the 19th century; -1 = unknown. */
+  centuries?: number[]
+  artist?: string | null
+  orient?: Orientation | null
+  uhd?: boolean | null
+  ai?: boolean | null
+  licences?: string[]
+  /** "shuffle" (seeded, the default), "new" (newest first); a text search sorts by relevance. */
+  sort?: "shuffle" | "new"
+}
+
+export type Orientation = "landscape" | "portrait" | "square"
+/** At least this many pixels on the long edge counts as 4K. */
+export const UHD_PX = 3840
+
+type FacetKey = "collections" | "centuries" | "artist" | "color" | "orient" | "uhd" | "ai" | "licences"
+
+/** Explore's facets: counts per value, given the other filters. */
+export interface Facets {
+  collections: { id: string; n: number }[]
+  centuries: { id: number; n: number }[]
+  artists: { id: string; n: number }[]
+  colors: { id: string; n: number }[]
+  orient: { id: Orientation; n: number }[]
+  uhd: { id: boolean; n: number }[]
+  ai: { id: boolean; n: number }[]
+  licences: { id: string; n: number }[]
+}
+
+const quote = (s: string) => `"${s.replace(/"/g, '""')}"`
+const grams = (w: string) => [...new Set(Array.from({ length: w.length - 2 }, (_, i) => w.slice(i, i + 3)))]
+
+/** "monet water" → strict: every word as a substring; fuzzy: any trigram of each word, for typos. */
+export function ftsQueries(q: string): { strict: string | null; fuzzy: string | null; short: string[] } {
+  const words = normalize(q).split(/\s+/).filter(Boolean)
+  const long = words.filter((w) => w.length >= 3)
+  const short = words.filter((w) => w.length < 3)
+  if (!long.length) return { strict: null, fuzzy: null, short }
+  const strict = long.map(quote).join(" AND ")
+  const fuzzy = long.map((w) => `(${grams(w).map(quote).join(" OR ")})`).join(" AND ")
+  return { strict, fuzzy, short }
 }
 
 type Row = typeof artworks.$inferSelect
@@ -155,6 +261,7 @@ function toArtwork(r: Row): Artwork {
     thumbUrl: r.thumbUrl,
     pageUrl: r.pageUrl,
     licence: r.licence,
+    attribution: r.attribution,
     aspect: r.aspect,
     maxPx: r.maxPx,
     categories: r.categories.split(",").filter(Boolean),
@@ -190,6 +297,8 @@ export class Store {
       (this.sqlite.prepare("PRAGMA table_info(artworks)").all() as { name: string }[]).map((c) => c.name),
     )
     if (!columns.has("licence")) this.sqlite.exec("ALTER TABLE artworks ADD COLUMN licence TEXT NOT NULL DEFAULT ''")
+    if (!columns.has("attribution"))
+      this.sqlite.exec("ALTER TABLE artworks ADD COLUMN attribution TEXT NOT NULL DEFAULT ''")
     const uploadColumns = new Set(
       (this.sqlite.prepare("PRAGMA table_info(uploads)").all() as { name: string }[]).map((c) => c.name),
     )
@@ -235,6 +344,7 @@ export class Store {
           thumbUrl: a.thumbUrl,
           pageUrl: a.pageUrl,
           licence: a.licence,
+          attribution: a.attribution,
           aspect: a.aspect,
           maxPx: a.maxPx,
           categories: `,${cats.join(",")},`,
@@ -263,6 +373,7 @@ export class Store {
               thumbUrl: values.thumbUrl,
               pageUrl: values.pageUrl,
               licence: values.licence,
+              attribution: values.attribution,
               categories: values.categories,
               search: values.search,
               aspect: sql`COALESCE(excluded.aspect, ${artworks.aspect})`,
@@ -271,6 +382,7 @@ export class Store {
           })
           .run()
       }
+      this.indexForSearch(arts)
     })()
     return arts.length
   }
@@ -291,10 +403,74 @@ export class Store {
     return r ? toArtwork(r) : null
   }
 
-  private where(q: Query, exclude?: Set<string>): SQL | undefined {
+  /** The FTS hits for a text search, best first; `fuzzy` when only the typo-tolerant query matched. */
+  searchIds(text: string, limit = 3000): { ids: string[]; fuzzy: boolean } | null {
+    const { strict, fuzzy } = ftsQueries(text)
+    if (!strict) return null
+    const run = (match: string) =>
+      (
+        this.sqlite
+          .prepare(
+            "SELECT id FROM artworks_fts WHERE artworks_fts MATCH ? ORDER BY bm25(artworks_fts, 0, 10, 6, 1) LIMIT ?",
+          )
+          .all(match, limit) as { id: string }[]
+      ).map((r) => r.id)
+    const exact = run(strict)
+    if (exact.length) return { ids: exact, fuzzy: false }
+    return { ids: run(fuzzy!).slice(0, 200), fuzzy: true }
+  }
+
+  /** Rebuilds the search index: title, artist, and tags, date, source and collection names. */
+  rebuildSearch() {
+    this.sqlite.transaction(() => {
+      this.sqlite.exec("DELETE FROM artworks_fts")
+      this.sqlite.exec(`
+        INSERT INTO artworks_fts (id, title, artist, extra)
+        SELECT a.id, a.title, a.artist,
+          a.date_text || ' ' || COALESCE(a.year, '') || ' ' || a.department || ' ' || a.culture || ' ' || a.medium || ' ' ||
+          REPLACE(REPLACE(REPLACE(a.tags, '[', ''), ']', ''), '"', '') || ' ' ||
+          COALESCE((SELECT group_concat(cc.title || ' ' || cc.tags, ' ') FROM community_items ci
+                    JOIN community_collections cc ON cc.id = ci.collection_id WHERE ci.artwork_id = a.id), '')
+        FROM artworks a WHERE a.hidden = 0`)
+    })()
+  }
+
+  private indexForSearch(arts: Artwork[]) {
+    const del = this.sqlite.prepare("DELETE FROM artworks_fts WHERE id = ?")
+    const ins = this.sqlite.prepare("INSERT INTO artworks_fts (id, title, artist, extra) VALUES (?, ?, ?, ?)")
+    for (const a of arts) {
+      del.run(a.id)
+      ins.run(a.id, a.title, a.artist, [a.dateText, a.year ?? "", a.department, a.culture, a.tags.join(" ")].join(" "))
+    }
+  }
+
+  private where(q: Query, exclude?: Set<string>, skip?: FacetKey, hits?: string[] | null): SQL | undefined {
     const c: (SQL | undefined)[] = [eq(artworks.hidden, false)]
+    if (q.catalogue) c.push(sql`${artworks.id} IN ${IN_ENABLED}`)
+    if (q.mine) c.push(sql`(${artworks.source} = 'mine' OR ${artworks.id} IN (SELECT artwork_id FROM saved))`)
+    if (q.collections?.length && skip !== "collections")
+      c.push(
+        sql`${artworks.id} IN (SELECT artwork_id FROM community_items WHERE collection_id IN (${sql.join(
+          q.collections.map((x) => sql`${x}`),
+          sql`, `,
+        )}))`,
+      )
+    if (q.centuries?.length && skip !== "centuries")
+      c.push(
+        sql`${CENTURY_SQL} IN (${sql.join(
+          q.centuries.map((x) => sql`${x}`),
+          sql`, `,
+        )})`,
+      )
+    if (q.artist && skip !== "artist") c.push(eq(artworks.artist, q.artist))
+    if (q.orient && skip !== "orient") c.push(sql`${ORIENT_SQL} = ${q.orient}`)
+    if (q.uhd != null && skip !== "uhd")
+      c.push(q.uhd ? gte(artworks.maxPx, UHD_PX) : sql`COALESCE(${artworks.maxPx}, 0) < ${UHD_PX}`)
+    if (q.ai != null && skip !== "ai") c.push(q.ai ? AI_SQL : sql`NOT ${AI_SQL}`)
+    if (q.licences?.length && skip !== "licences") c.push(inArray(artworks.licence, q.licences))
+    if (hits) c.push(hits.length ? inArray(artworks.id, hits) : sql`0`)
     if (q.category) c.push(like(artworks.categories, `%,${q.category},%`))
-    if (q.color) c.push(eq(artworks.colorFamily, q.color))
+    if (q.color && skip !== "color") c.push(eq(artworks.colorFamily, q.color))
     if (q.landscape) c.push(and(gte(artworks.aspect, LANDSCAPE_MIN), lte(artworks.aspect, LANDSCAPE_MAX)))
     if (q.source) c.push(eq(artworks.source, q.source as Source))
     if (q.sources) c.push(q.sources.length ? inArray(artworks.source, q.sources) : sql`0`)
@@ -307,16 +483,18 @@ export class Store {
       )
     }
     if (q.favourites) c.push(isNotNull(favourites.artworkId))
-    for (const word of normalize(q.q ?? "")
+    // Words FTS can't take (under 3 letters), or every word when there's no hit list.
+    const words = normalize(q.q ?? "")
       .split(/\s+/)
-      .filter(Boolean))
-      c.push(like(artworks.search, `%${word}%`))
+      .filter(Boolean)
+    for (const word of hits ? words.filter((w) => w.length < 3) : words) c.push(like(artworks.search, `%${word}%`))
     if (exclude?.size) c.push(notInArray(artworks.id, [...exclude]))
     return and(...c)
   }
 
-  query(q: Query): { items: Artwork[]; total: number } {
-    const where = this.where(q)
+  query(q: Query): { items: Artwork[]; total: number; fuzzy: boolean } {
+    const found = q.q ? this.searchIds(q.q) : null
+    const where = this.where(q, undefined, undefined, found?.ids ?? null)
     const total = this.db
       .select({ n: sql<number>`count(*)` })
       .from(artworks)
@@ -329,11 +507,92 @@ export class Store {
       .from(artworks)
       .leftJoin(favourites, eq(favourites.artworkId, artworks.id))
       .where(where)
-      .orderBy(q.favourites ? desc(favourites.addedAt) : sql`((${artworks}.rowid * ${seed}) % 1000003)`)
+      .orderBy(
+        found
+          ? sql`instr(${`,${found.ids.join(",")},`}, ',' || ${artworks.id} || ',')`
+          : q.favourites
+            ? desc(favourites.addedAt)
+            : q.sort === "new"
+              ? desc(artworks.addedAt)
+              : sql`((${artworks}.rowid * ${seed}) % 1000003)`,
+      )
       .limit(q.limit ?? 48)
       .offset(q.offset ?? 0)
       .all()
-    return { items: rows.map((r) => toArtwork(r.a)), total }
+    return { items: rows.map((r) => toArtwork(r.a)), total, fuzzy: found?.fuzzy ?? false }
+  }
+
+  /** Counts per facet value; each facet counts as if its own filter weren't set. */
+  facets(q: Query): Facets {
+    const found = q.q ? this.searchIds(q.q) : null
+    const group = <K extends string | number>(
+      skip: FacetKey,
+      key: SQL,
+      extra?: (s: SQL | undefined) => SQL | undefined,
+      limit = 200,
+    ) =>
+      this.db
+        .select({ id: sql<K>`${key}`, n: sql<number>`count(DISTINCT ${artworks.id})` })
+        .from(artworks)
+        .leftJoin(favourites, eq(favourites.artworkId, artworks.id))
+        .where(
+          extra
+            ? extra(this.where(q, undefined, skip, found?.ids ?? null))
+            : this.where(q, undefined, skip, found?.ids ?? null),
+        )
+        .groupBy(key)
+        .orderBy(sql`count(DISTINCT ${artworks.id}) DESC`)
+        .limit(limit)
+        .all()
+        .filter((r) => r.id !== null && r.id !== "")
+    const collections = this.db
+      .select({ id: communityItems.collectionId, n: sql<number>`count(DISTINCT ${artworks.id})` })
+      .from(artworks)
+      .leftJoin(favourites, eq(favourites.artworkId, artworks.id))
+      .innerJoin(communityItems, eq(communityItems.artworkId, artworks.id))
+      .innerJoin(
+        communityCollections,
+        and(eq(communityCollections.id, communityItems.collectionId), eq(communityCollections.enabled, true)),
+      )
+      .where(this.where(q, undefined, "collections", found?.ids ?? null))
+      .groupBy(communityItems.collectionId)
+      .orderBy(communityCollections.position)
+      .all()
+    return {
+      collections,
+      centuries: group<number>("centuries", CENTURY_SQL).toSorted((a, b) => a.id - b.id),
+      artists: group<string>("artist", sql`${artworks.artist}`, undefined, 40),
+      colors: group<string>("color", sql`${artworks.colorFamily}`),
+      orient: group<Orientation>("orient", ORIENT_SQL),
+      uhd: group<number>("uhd", sql`COALESCE(${artworks.maxPx}, 0) >= ${UHD_PX}`).map((r) => ({
+        id: Boolean(r.id),
+        n: r.n,
+      })),
+      ai: group<number>("ai", AI_SQL).map((r) => ({ id: Boolean(r.id), n: r.n })),
+      licences: group<string>("licences", sql`${artworks.licence}`),
+    }
+  }
+
+  /** Newest works in the catalogue, and per enabled collection its first works in order (Explore's landing). */
+  landing(perRow = 12) {
+    const favs = this.favouriteIds()
+    void favs
+    const rows = this.sqlite
+      .prepare(
+        `SELECT ci.collection_id AS c, ci.artwork_id AS id FROM community_items ci
+         JOIN community_collections cc ON cc.id = ci.collection_id
+         JOIN artworks a ON a.id = ci.artwork_id
+         WHERE cc.enabled = 1 AND a.hidden = 0 AND ci.position < ?
+         ORDER BY cc.position, ci.position`,
+      )
+      .all(perRow * 2) as { c: string; id: string }[]
+    const byCollection = new Map<string, string[]>()
+    for (const r of rows) {
+      const list = byCollection.get(r.c) ?? []
+      if (list.length < perRow) list.push(r.id)
+      byCollection.set(r.c, list)
+    }
+    return byCollection
   }
 
   random(q: Query, exclude?: Set<string>): Artwork | null {
@@ -396,6 +655,16 @@ export class Store {
       .set({ colorHex: hex, colorFamily: family, aspect: sql`COALESCE(${artworks.aspect}, ${aspect})` })
       .where(eq(artworks.id, id))
       .run()
+  }
+
+  // ------------------------------------------------------------ saved (live search → My collection)
+  setSaved(id: string, on: boolean) {
+    if (on) this.db.insert(saved).values({ artworkId: id, addedAt: now() }).onConflictDoNothing().run()
+    else this.db.delete(saved).where(eq(saved.artworkId, id)).run()
+  }
+
+  isSaved(id: string): boolean {
+    return Boolean(this.db.select().from(saved).where(eq(saved.artworkId, id)).get())
   }
 
   // ------------------------------------------------------------ favourites

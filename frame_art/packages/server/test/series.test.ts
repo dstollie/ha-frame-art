@@ -13,7 +13,7 @@ import { paths, type Settings } from "../src/config.js"
 import type { HomeAssistant } from "../src/ha.js"
 import { MqttBridge, seriesDiscovery } from "../src/mqtt.js"
 import { FrameTV, type TV } from "../src/tv.js"
-import { art, jpeg, tempSettings } from "./helpers.js"
+import { art, inCatalogue, jpeg, tempSettings } from "./helpers.js"
 
 let frames: FakeFrame[] = []
 let settings: Settings
@@ -73,6 +73,7 @@ async function boot(opts: { tvs?: number; keepUploads?: number } = {}) {
     art("rijks:3", { title: "Gezicht op Delft", artist: "Johannes Vermeer" }),
     art("cleveland:4", { title: "View of the Sea" }),
   ])
+  inCatalogue(svc.store, ["met:1", "met:2", "rijks:3", "cleveland:4"])
   api = testClient(createApi(svc))
   for (const t of tvs.values()) await t.pair()
 }
