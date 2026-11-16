@@ -1,0 +1,48 @@
+frame_art/packages/web/src/pages/share.tsx
+  s_e57963d2c3d792::t_5a87d4d056db06 1-128
+  s_e57963d2c3d792::t_495929488e66d2 129-150
+frame_art/packages/web/src/components/artwork-grid.tsx
+  s_e57963d2c3d792::t_789179e6b15569 1,6-8,11,26-171,174,176-200,202-215,219-231,238,244,270-274
+  s_e57963d2c3d792::t_323fc44f588bef 275,288
+frame_art/packages/web/src/components/live-results.tsx
+  s_e57963d2c3d792::t_6de0f4e9b4efb1 1-99
+  s_e57963d2c3d792::t_c6c08a661c3956 100-109
+frame_art/packages/web/src/components/facets.tsx
+  s_e57963d2c3d792::t_de2435a87268a5 1-197
+  s_e57963d2c3d792::t_e2ea17583f4c2d 198-236
+frame_art/packages/web/src/pages/explore.tsx
+  s_e57963d2c3d792::t_7385ce1ec2806f 1,5-8,11-19,22-65,74-78,85,88-89,107-108,122,127-131,133-166,170-172
+  s_e57963d2c3d792::t_719bc2c9ffe2b5 167-169
+frame_art/packages/web/e2e/app.spec.ts
+  s_e57963d2c3d792::t_384d279f5952b5 66,68-74,78-184,232,234-235,238-240,242-243
+frame_art/packages/web/src/lib/api.ts
+  s_e57963d2c3d792::t_9777517de7e886 45-47,54-55,57-107,134,137,141,150-207,521-523,587-595
+frame_art/packages/web/src/lib/i18n.ts
+  s_e57963d2c3d792::t_d364307f7bb745 15,158-224,249,380-439
+frame_art/packages/web/src/pages/artwork.tsx
+  s_e57963d2c3d792::t_a614a41e077ec9 10,32,65-66,128-138,140-146,155-159
+frame_art/packages/web/src/pages/collection.tsx
+  s_e57963d2c3d792::t_f3600e27ea7669 2,130-136
+frame_art/packages/web/src/pages/series-detail.tsx
+  s_e57963d2c3d792::t_aada24f47d5a9f 3,225-232
+frame_art/packages/web/src/pages/settings.tsx
+  s_e57963d2c3d792::t_9879fffa477341 14-15,143-174,327-330,339-343
+frame_art/packages/web/src/router.tsx
+  s_e57963d2c3d792::t_7a1019df8d80ee 2-3,12,20,23-30,38,42-50,89-101,111,123-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32c86c3ec201ef62bdb8bc2e29badc7efc3d64f9",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
