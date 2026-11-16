@@ -1,0 +1,21 @@
+README.md
+  s_40acdc32effda0::t_bb17a163d67302 1-46,48,50,52,54-59,61,63,65,67,69-80,82-86,90,107,146,148-152,154-204,246,248-252
+frame_art/DOCS.md
+  s_40acdc32effda0::t_ed045b7823ad81 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13c28c506affe65e101ca79a4ca9b47d7e3932b4",
+  "prompts": {},
+  "sessions": {
+    "s_40acdc32effda0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7262b8b-4dd7-4e00-90b9-8036f831f03f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
