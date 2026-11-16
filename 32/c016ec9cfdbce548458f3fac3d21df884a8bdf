@@ -1,0 +1,25 @@
+AGENTS.md
+  s_e57963d2c3d792::t_337403ef23c69c 8,20,22,89,123
+knowledge/codebase/01-index.md
+  s_e57963d2c3d792::t_e6c29c1e572560 32-36
+knowledge/codebase/04-data-models.md
+  s_e57963d2c3d792::t_405b6ca9997843 65-86,95-96
+knowledge/codebase/07-adr-catalogue-from-collections.md
+  s_e57963d2c3d792::t_4e2c0d5e4f3c97 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32c016ec9cfdbce548458f3fac3d21df884a8bdf",
+  "prompts": {},
+  "sessions": {
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
