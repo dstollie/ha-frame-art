@@ -1,0 +1,59 @@
+docs/brand/README.md
+  s_40acdc32effda0::t_3976e4043b237a 1-76
+docs/brand/svg/banner-dark.svg
+  s_40acdc32effda0::t_c9a694c514e2bd 1
+docs/brand/svg/banner-light.svg
+  s_40acdc32effda0::t_07edb7cbaac347 1
+docs/brand/svg/collections-banner-dark.svg
+  s_40acdc32effda0::t_b9f7a0fdb608d6 1
+docs/brand/svg/collections-banner-light.svg
+  s_40acdc32effda0::t_8e90c4c35d1929 1
+docs/brand/svg/collections-social-preview.svg
+  s_40acdc32effda0::t_3f9063c5ece99b 1
+docs/brand/svg/favicon.svg
+  s_40acdc32effda0::t_68e324b27638de 1
+docs/brand/svg/lockup-any.svg
+  s_40acdc32effda0::t_a7ad978b46e91c 1
+docs/brand/svg/lockup-dark.svg
+  s_40acdc32effda0::t_33436389ddb7dc 1
+docs/brand/svg/lockup.svg
+  s_40acdc32effda0::t_9ac7c725bb2efc 1
+docs/brand/svg/mark-dark.svg
+  s_40acdc32effda0::t_62b8d71dfab54f 1
+docs/brand/svg/mark-mono.svg
+  s_40acdc32effda0::t_53d0166ef455f1 1
+docs/brand/svg/mark.svg
+  s_40acdc32effda0::t_4b490a1cfc3fa0 1
+docs/brand/svg/social-preview.svg
+  s_40acdc32effda0::t_d854e5d7885f14 1
+docs/brand/svg/wordmark-any.svg
+  s_40acdc32effda0::t_e07d6fd848b418 1
+docs/brand/svg/wordmark-dark.svg
+  s_40acdc32effda0::t_14f86fe328001b 1
+docs/brand/svg/wordmark.svg
+  s_40acdc32effda0::t_1ec852458dc82d 1
+docs/brand/tools/export.mjs
+  s_40acdc32effda0::t_0898ed27d84b9e 1-53
+docs/brand/tools/gen.py
+  s_40acdc32effda0::t_8e3006d4a3d584 1-219
+docs/brand/tools/room-mockup.html
+  s_40acdc32effda0::t_aee5ccf67bf466 1-36
+docs/brand/tools/wordmark_paths.py
+  s_40acdc32effda0::t_f95524098140bd 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8375853f6a8a9d8ce4cc13bbcd7c350e33cd485f",
+  "prompts": {},
+  "sessions": {
+    "s_40acdc32effda0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7262b8b-4dd7-4e00-90b9-8036f831f03f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
