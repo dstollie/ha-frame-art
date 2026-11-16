@@ -11,6 +11,8 @@ import {
   useSetCategory,
   useSetDisplay,
   useSetSource,
+  useCollections,
+  useSetCollection,
   useSources,
   useStartSync,
   useSync,
@@ -134,6 +136,38 @@ function TvCard({ tv }: { tv: TvState }) {
           }))}
         />
       </Row>
+    </Card>
+  )
+}
+
+/** The catalogue's collections from frame-art-collections, each on or off. */
+function CollectionsCard() {
+  const t = useT()
+  const cols = useCollections()
+  const set = useSetCollection()
+  return (
+    <Card header={t.collectionsLabel}>
+      <p className="px-4 pb-2 text-sm text-text2">{t.collectionsHelp}</p>
+      {cols.error && (
+        <div className="px-4 pb-3">
+          <Alert type="error" title={t.loadFailed}>
+            {cols.error.message}
+          </Alert>
+        </div>
+      )}
+      {cols.isLoading && <div className="mx-4 mb-3 h-10 animate-pulse rounded bg-bg2" />}
+      {cols.data?.map((c) => (
+        <div key={c.id} className="flex items-center gap-3 border-t border-divider px-4 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm">{c.title}</p>
+            <p className="text-xs text-text2">
+              {t.worksCount(c.count)}
+              {c.aiCount > 0 ? ` · ${t.aiCount(c.aiCount)}` : ""} · {t.curatedBy(c.curator)}
+            </p>
+          </div>
+          <Switch label={c.title} checked={c.enabled} onChange={(enabled) => set.mutate({ id: c.id, enabled })} />
+        </div>
+      ))}
     </Card>
   )
 }
@@ -290,8 +324,10 @@ export function SettingsPage() {
         <TvCard key={tv.id} tv={tv} />
       ))}
 
-      <Card header={t.sources}>
-        <p className="px-4 pb-2 text-sm text-text2">{t.sourcesHelp}</p>
+      <CollectionsCard />
+
+      <Card header={t.liveSources}>
+        <p className="px-4 pb-2 text-sm text-text2">{t.liveSourcesHelp}</p>
         {sources.error && (
           <div className="px-4 pb-3">
             <Alert type="error" title={t.loadFailed}>
@@ -300,9 +336,11 @@ export function SettingsPage() {
           </div>
         )}
         {sources.isLoading && <div className="mx-4 mb-3 h-10 animate-pulse rounded bg-bg2" />}
-        {sources.data?.map((src) => (
-          <SourceRow key={src.id} s={src} />
-        ))}
+        {sources.data
+          ?.filter((src) => !src.local)
+          .map((src) => (
+            <SourceRow key={src.id} s={src} />
+          ))}
       </Card>
 
       <McpCard />

@@ -1,46 +1,92 @@
-import { mdiDiceMultipleOutline, mdiMagnify } from "@mdi/js"
+import { mdiArrowRight, mdiDiceMultipleOutline, mdiMagnify, mdiShuffleVariant, mdiSortClockDescending } from "@mdi/js"
 import { useNavigate } from "@tanstack/react-router"
 import { useCallback, useEffect, useState } from "react"
 
-import { ArtworkGrid } from "@/components/artwork-grid"
-import { Alert, Button, Chip, cn, Icon, Select, Spinner, Switch, TextField } from "@/components/ha"
+import { ArtworkCard, ArtworkGrid } from "@/components/artwork-grid"
+import { FacetBar } from "@/components/facets"
+import { Alert, Button, Icon, Spinner, TextField } from "@/components/ha"
+import { LiveResults } from "@/components/live-results"
 import { CreateSeriesButton } from "@/components/series"
 import { NowShowing } from "@/components/tv-actions"
-import { randomArtwork, useArtworks, useConfig, useSync, type BrowseFilters } from "@/lib/api"
-import { useLanguage } from "@/lib/hass"
+import {
+  isFiltering,
+  randomArtwork,
+  useArtworks,
+  useLanding,
+  useSync,
+  type ArtworkDTO,
+  type BrowseFilters,
+} from "@/lib/api"
 import { useT } from "@/lib/i18n"
 
-export const SWATCH: Record<string, string> = {
-  red: "#c0392b",
-  gold: "#d4a537",
-  brown: "#7b5230",
-  green: "#3f7f4a",
-  blue: "#3b6ea8",
-  dark: "#262626",
-  light: "#ece8e1",
+/** A horizontal row of large cards on the landing: a collection, the newest, or the popular works. */
+function Row({ title, items, onAll }: { title: string; items: ArtworkDTO[]; onAll?: () => void }) {
+  const t = useT()
+  if (!items.length) return null
+  return (
+    <section aria-label={title} className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-medium">{title}</h2>
+        {onAll && (
+          <button type="button" onClick={onAll} className="inline-flex items-center gap-1 text-sm text-primary">
+            {t.seeAll}
+            <Icon path={mdiArrowRight} size={16} />
+          </button>
+        )}
+      </div>
+      <div className="-mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-2 scrollbar-none sm:mx-0 sm:px-0">
+        {items.map((a) => (
+          <div key={a.id} className="w-56 shrink-0 snap-start sm:w-64">
+            <ArtworkCard art={a} />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function Landing({ set }: { set: (patch: Partial<BrowseFilters>) => void }) {
+  const t = useT()
+  const landing = useLanding()
+  if (landing.isLoading) return <Spinner />
+  const l = landing.data
+  if (!l) return null
+  return (
+    <div className="space-y-6">
+      <Row title={t.popular} items={l.popular} />
+      <Row title={t.newest} items={l.newest} onAll={() => set({ sort: "new" })} />
+      {l.collections.map((c) => (
+        <Row key={c.id} title={c.title} items={c.items} onAll={() => set({ collection: [c.id] })} />
+      ))}
+      <Button appearance="filled" onClick={() => set({ sort: "shuffle", seed: Math.floor(Math.random() * 1e6) })}>
+        {t.browseAll}
+      </Button>
+    </div>
+  )
 }
 
 export function ExplorePage({ filters }: { filters: BrowseFilters }) {
   const t = useT()
-  const lang = useLanguage()
   const navigate = useNavigate({ from: "/" })
-  const config = useConfig()
   const sync = useSync()
   const [q, setQ] = useState(filters.q ?? "")
   const [surprising, setSurprising] = useState(false)
-  const works = useArtworks(filters)
-  const items = works.data?.pages.flatMap((p) => p.items) ?? []
-  const total = works.data?.pages[0]?.total ?? 0
+  const filtering = isFiltering(filters)
+  const works = useArtworks(filters, filtering)
+  const items = filtering ? (works.data?.pages.flatMap((p) => p.items) ?? []) : []
+  const first = works.data?.pages[0]
+  const total = first?.total ?? 0
 
   const set = useCallback(
     (patch: Partial<BrowseFilters>) =>
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false }),
     [navigate],
   )
+  // Search as you type, a moment after the last key.
   useEffect(() => {
     const timer = setTimeout(() => {
-      if ((filters.q ?? "") !== q) set({ q: q || undefined })
-    }, 280)
+      if ((filters.q ?? "") !== q.trim()) set({ q: q.trim() || undefined })
+    }, 250)
     return () => clearTimeout(timer)
   }, [q, filters.q, set])
 
@@ -58,10 +104,8 @@ export function ExplorePage({ filters }: { filters: BrowseFilters }) {
 
   return (
     <div className="space-y-6">
-      <NowShowing />
-
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <section className="space-y-3" aria-label={t.tabExplore}>
+        <div className="flex flex-wrap items-center gap-2">
           <TextField
             value={q}
             onChange={setQ}
@@ -70,92 +114,62 @@ export function ExplorePage({ filters }: { filters: BrowseFilters }) {
             type="search"
             className="min-w-[220px] flex-1"
           />
-          <Select
-            label={t.source}
-            value={filters.source ?? ""}
-            onChange={(v) => set({ source: v || undefined })}
-            options={[
-              { value: "", label: t.allSources },
-              ...(config.data?.sources ?? []).map((s) => ({ value: s.id, label: s.name })),
-            ]}
-          />
           <Button onClick={surprise} disabled={surprising}>
             {surprising ? <Spinner size={18} /> : <Icon path={mdiDiceMultipleOutline} size={18} />}
             {t.surprise}
           </Button>
         </div>
-
-        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:px-0">
-          <Chip active={!filters.cat} onClick={() => set({ cat: undefined })}>
-            {t.all}
-          </Chip>
-          {config.data?.categories.map((c) => (
-            <Chip
-              key={c.id}
-              active={filters.cat === c.id}
-              onClick={() => set({ cat: filters.cat === c.id ? undefined : c.id })}
-            >
-              {c.label[lang]}
-              {c.count > 0 && <span className="text-xs text-text2">{c.count.toLocaleString(lang)}</span>}
-            </Chip>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <div className="flex items-center gap-1.5" role="group" aria-label="Colour">
-            {config.data?.colors.map((c) => (
-              <button
-                key={c}
-                type="button"
-                title={t.colors[c] ?? c}
-                aria-label={t.colors[c] ?? c}
-                aria-pressed={filters.color === c}
-                onClick={() => set({ color: filters.color === c ? undefined : c })}
-                className={cn(
-                  "size-6 rounded-full border border-divider transition-transform hover:scale-110",
-                  filters.color === c && "ring-2 ring-primary ring-offset-2 ring-offset-bg",
-                )}
-                style={{ background: SWATCH[c] }}
-              />
-            ))}
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch
-              checked={!filters.all}
-              onChange={(on) => set({ all: on ? undefined : true })}
-              label={t.landscapeOnly}
-            />
-            {t.landscapeOnly}
-          </label>
-          <span className="ml-auto flex items-center gap-2 text-sm text-text2">
-            {(filters.q || filters.cat || filters.color || filters.source) && total > 0 && (
-              <CreateSeriesButton
-                label={t.seriesFromResults}
-                name={
-                  filters.q ??
-                  config.data?.categories.find((c) => c.id === filters.cat)?.label[lang] ??
-                  filters.source ??
-                  t.series
-                }
-                from={{ query: filters }}
-              />
-            )}
-            {t.works(total)}
-          </span>
-        </div>
+        <FacetBar filters={filters} set={set} />
       </section>
 
       {empty ? (
         <Alert type="info">{t.buildingCatalogue}</Alert>
-      ) : !works.isLoading && !items.length ? (
-        <Alert type="info">{t.nothingFound}</Alert>
+      ) : !filtering ? (
+        <>
+          <NowShowing />
+          <Landing set={set} />
+        </>
       ) : (
-        <ArtworkGrid
-          items={items}
-          hasMore={Boolean(works.hasNextPage)}
-          loading={works.isLoading || works.isFetchingNextPage}
-          loadMore={() => void works.fetchNextPage()}
-        />
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-text2">
+            <span aria-live="polite">{t.works(total)}</span>
+            {first?.fuzzy && <span>· {t.closeMatches}</span>}
+            <span className="ml-auto flex flex-wrap items-center gap-1">
+              <Button
+                appearance="plain"
+                onClick={() => set({ sort: "shuffle", seed: Math.floor(Math.random() * 1e6) })}
+              >
+                <Icon path={mdiShuffleVariant} size={18} />
+                {t.shuffle2}
+              </Button>
+              <Button
+                appearance="plain"
+                onClick={() => set({ sort: filters.sort === "new" ? undefined : "new", seed: undefined })}
+              >
+                <Icon path={mdiSortClockDescending} size={18} />
+                {t.sortNew}
+              </Button>
+              {total > 0 && (
+                <CreateSeriesButton
+                  label={t.seriesFromResults}
+                  name={filters.q ?? filters.artist ?? t.series}
+                  from={{ query: filters }}
+                />
+              )}
+            </span>
+          </div>
+          {!works.isLoading && !items.length ? (
+            <Alert type="info">{t.nothingFound}</Alert>
+          ) : (
+            <ArtworkGrid
+              items={items}
+              hasMore={Boolean(works.hasNextPage)}
+              loading={works.isLoading || works.isFetchingNextPage}
+              loadMore={() => void works.fetchNextPage()}
+            />
+          )}
+          {filters.q && filters.q.length >= 2 && <LiveResults key={filters.q} q={filters.q} />}
+        </>
       )}
     </div>
   )

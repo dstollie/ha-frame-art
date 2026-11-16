@@ -1,5 +1,5 @@
 import { mdiDelete, mdiImagePlus, mdiPencil, mdiPlus } from "@mdi/js"
-import { useNavigate } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 
 import { ArtworkGrid } from "@/components/artwork-grid"
@@ -127,6 +127,13 @@ export function CollectionPage({ album }: { album: string | undefined }) {
         {current && !naming && (
           <span className="ml-auto flex items-center">
             <CreateSeriesButton label={t.seriesFromAlbum} name={current.name} from={{ albumId: current.id }} />
+            <Link
+              to="/share"
+              search={{ album: current.id }}
+              className="inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium text-primary hover:bg-bg2"
+            >
+              {t.shareCollection}
+            </Link>
             <IconButton
               path={mdiPencil}
               label={t.rename}

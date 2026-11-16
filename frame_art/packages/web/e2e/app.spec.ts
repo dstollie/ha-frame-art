@@ -63,18 +63,125 @@ test("works as the ingress page too, with everything under the ingress prefix", 
   expect(errors).toEqual([])
 })
 
-test("browse by category and search; a deep link survives a reload", async ({ page }) => {
+test("search as you type, typo-tolerant, and the view survives a reload", async ({ page }) => {
   await page.goto("/frame-art/")
-  await page.getByRole("button", { name: /^Old masters/ }).click()
-  await expect(page).toHaveURL(/cat=old-masters/)
-  await page.getByPlaceholder("Search title or artist").fill("delft")
-  await expect(page).toHaveURL(/q=delft/)
-  await page.locator("a[href*='/frame-art/art/']").first().click()
-  await expect(page.getByRole("heading", { level: 2 }).first()).toContainText("Gezicht op Delft")
+  await page.getByPlaceholder(/Search title, artist/).fill("vermer")
+  await expect(page).toHaveURL(/q=vermer/)
+  await expect(page.getByText("No exact matches; these come close.")).toBeVisible()
+  await expect(page.locator("a[data-card]").first()).toContainText("Gezicht op Delft")
+  await page.getByPlaceholder(/Search title, artist/).fill("hokusai kanagawa")
+  await expect(page).toHaveURL(/q=hokusai/)
+  await expect(page.locator("a[data-card]").first()).toContainText("Under the Wave off Kanagawa")
   const url = page.url()
   await page.reload()
   expect(page.url()).toBe(url)
-  await expect(page.getByRole("heading", { level: 2 }).first()).toContainText("Gezicht op Delft")
+  await expect(page.getByPlaceholder(/Search title, artist/)).toHaveValue("hokusai kanagawa")
+  await page.locator("a[data-card]").first().click()
+  await expect(page.getByRole("heading", { level: 2 }).first()).toContainText("Under the Wave off Kanagawa")
+})
+
+test("facets: counts, removable chips, linkable state", async ({ page }) => {
+  await page.goto("/frame-art/?q=monet")
+  await page.getByRole("button", { name: "Collection" }).click()
+  const values = page.getByRole("group", { name: "Collection" })
+  await expect(values.getByRole("button", { name: /Impressionism \d+/ })).toBeVisible()
+  await values.getByRole("button", { name: /Seascapes/ }).click()
+  await expect(page).toHaveURL(/collection=/)
+  await expect(page.locator("a[data-card]").first()).toContainText("Water Lilies")
+  await page.getByRole("button", { name: "Period" }).click()
+  await expect(
+    page.getByRole("group", { name: "Period" }).getByRole("button", { name: /20th century \d+/ }),
+  ).toBeVisible()
+
+  const url = page.url()
+  await page.goto(url)
+  await expect(page.getByRole("button", { name: "Remove filter Seascapes" })).toBeVisible()
+  await page.getByRole("button", { name: "Remove filter Seascapes" }).click()
+  await expect(page).not.toHaveURL(/collection=/)
+
+  await page.goto("/frame-art/?ai=yes")
+  await expect(page.getByText(/^2 works$/)).toBeVisible()
+  await page.getByRole("button", { name: "Clear all" }).click()
+  await expect(page).not.toHaveURL(/ai=yes/)
+})
+
+test("landing: rows per collection and the newest; See all opens the collection", async ({ page }) => {
+  await page.goto("/frame-art/")
+  await expect(page.getByRole("region", { name: "New in the catalogue" })).toBeVisible()
+  const dutch = page.getByRole("region", { name: "Dutch Golden Age" })
+  await expect(dutch.locator("a[data-card]").first()).toBeVisible()
+  await dutch.getByRole("button", { name: "See all" }).click()
+  await expect(page).toHaveURL(/collection=dutch/)
+  await expect(page.getByRole("button", { name: "Remove filter Dutch Golden Age" })).toBeVisible()
+})
+
+test("grid: quick actions on a card, and arrow keys move between cards", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "hover and keyboard")
+  await ensurePaired(page, "Woonkamer")
+  await page.goto("/frame-art/?collection=impressionism")
+  const cards = page.locator("a[data-card]")
+  await cards.first().focus()
+  await page.keyboard.press("ArrowRight")
+  await expect(cards.nth(1)).toBeFocused()
+  await page.keyboard.press("ArrowLeft")
+  await expect(cards.first()).toBeFocused()
+
+  const title = (await cards.first().locator("p").first().textContent())!.trim()
+  const name = `Snel ${Date.now()}`
+  await cards.first().hover()
+  await page.getByRole("button", { name: `New series: ${title}` }).click()
+  await page.getByPlaceholder("Series name").fill(name)
+  await page.getByRole("button", { name: "Create" }).click()
+  await expect(page.getByRole("status").filter({ hasText: `Added to ${name}` })).toBeVisible()
+
+  await cards.nth(1).hover()
+  await page
+    .getByRole("button", { name: /^Add to series: / })
+    .nth(1)
+    .click()
+  await page.getByRole("button", { name, exact: true }).click()
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: `Added to ${name}` })
+      .first(),
+  ).toBeVisible()
+
+  await cards.nth(2).hover()
+  await page
+    .getByRole("button", { name: /^Show on Woonkamer: / })
+    .nth(2)
+    .click()
+  await expect(page.getByRole("status").filter({ hasText: /On its way to the Woonkamer TV/ })).toBeVisible()
+
+  const series = (await (await page.request.get("/api/frame_art/api/series")).json()) as {
+    id: string
+    name: string
+    count: number
+  }[]
+  const made = series.find((s) => s.name === name)!
+  expect(made.count).toBe(2)
+  await page.request.delete(`/api/frame_art/api/series/${made.id}`)
+})
+
+test("live search in the museums: already in the catalogue, or save to My collection", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "one live run is enough")
+  await page.goto("/frame-art/?q=monet")
+  const live = page.getByRole("region", { name: "“monet” in the museums" })
+  await live.getByRole("button", { name: "Search the museums" }).click()
+  const already = live.getByRole("listitem", { name: "Water Lilies 2" })
+  await expect(already.getByText("Already in your catalogue")).toBeVisible()
+  const fresh = live.getByRole("listitem", { name: "Bridge over a Pond" })
+  await expect(fresh.getByRole("link", { name: "Propose for the collections" })).toHaveAttribute(
+    "href",
+    /frame-art-collections\/issues\/new\?template=new-collection.yml&works=/,
+  )
+  await fresh.getByRole("button", { name: "Save to My collection" }).click()
+  await expect(fresh.getByText("In My collection")).toBeVisible()
+  await page.goto("/frame-art/collection")
+  await expect(page.locator("a[href*='/frame-art/art/met']").first()).toContainText("Bridge over a Pond")
+  await page.locator("a[href*='/frame-art/art/met']").first().click()
+  await page.getByRole("button", { name: "Remove from My collection" }).click()
 })
 
 test("pair, then fill a work on the woonkamer Frame, then once with a passe-partout", async ({ page }) => {
@@ -122,17 +229,18 @@ test("My collection: upload into a new album, show it, delete it", async ({ page
   await expect(page).toHaveURL(/\/collection/)
 })
 
-test("Settings: turn a source off and the catalogue follows; MCP endpoint is shown", async ({ page }, info) => {
+test("Settings: turn a collection off and Explore follows; MCP endpoint is shown", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "settings run once")
-  await page.goto("/frame-art/?source=")
-  const before = await page.getByText(/\d+ works/).textContent()
+  await page.goto("/frame-art/?ai=yes")
+  await expect(page.getByText(/^2 works$/)).toBeVisible()
   await page.goto("/frame-art/settings")
   await expect(page.getByText("/api/frame_art/mcp").first()).toBeVisible()
-  await page.getByRole("switch", { name: "Rijksmuseum" }).click()
-  await page.goto("/frame-art/")
-  await expect(page.getByText(/\d+ works/)).not.toHaveText(before!)
+  await page.getByRole("switch", { name: "AI dreams" }).click()
+  await page.goto("/frame-art/?ai=yes")
+  await expect(page.getByText(/^0 works$/)).toBeVisible()
   await page.goto("/frame-art/settings")
-  await page.getByRole("switch", { name: "Rijksmuseum" }).click()
+  await page.getByRole("switch", { name: "AI dreams" }).click()
+  await expect(page.getByRole("switch", { name: "AI dreams" })).toHaveAttribute("aria-checked", "true")
 })
 
 test("phone: HA menu button and tabs", async ({ page }, info) => {

@@ -7,6 +7,7 @@ import {
   mdiHeartOutline,
   mdiOpenInNew,
   mdiPencil,
+  mdiRobotOutline,
 } from "@mdi/js"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
@@ -28,6 +29,7 @@ import {
   useRenameArtwork,
   useThumb,
   useTvs,
+  useUnsave,
   type Mode,
 } from "@/lib/api"
 import { useLanguage } from "@/lib/hass"
@@ -60,6 +62,8 @@ export function ArtworkPage({ id, mode: wanted }: { id: string; mode: Mode | und
   const setMode = (m: Mode) =>
     void navigate({ to: "/art/$id", params: { id }, search: { mode: m }, replace: true, resetScroll: false })
   const label = (c: string) => config.data?.categories.find((x) => x.id === c)?.label[lang] ?? c
+  const collectionTitle = (c: string) => config.data?.collections.find((x) => x.id === c)?.title ?? c
+  const unsave = useUnsave()
   const tvName = (tv: string) => config.data?.tvs.find((x) => x.id === tv)?.name ?? tv
 
   if (art.isError) {
@@ -121,7 +125,25 @@ export function ArtworkPage({ id, mode: wanted }: { id: string; mode: Mode | und
                   {a.department}
                   {a.licence ? ` · ${a.licence}` : ""}
                 </p>
+                {a.attribution && (
+                  <p className="text-sm text-text2">
+                    {t.credit}: {a.attribution}
+                  </p>
+                )}
+                {a.ai && (
+                  <p className="inline-flex items-center gap-1 text-sm text-text2">
+                    <Icon path={mdiRobotOutline} size={16} />
+                    {t.aiMade}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-1.5 pt-2">
+                  {a.collections.map((c) => (
+                    <Link key={c} to="/" search={{ collection: [c] }}>
+                      <Chip active={false} onClick={() => undefined}>
+                        {collectionTitle(c)}
+                      </Chip>
+                    </Link>
+                  ))}
                   {a.categories.map((c) => (
                     <Link key={c} to="/" search={{ cat: c }}>
                       <Chip active={false} onClick={() => undefined}>
@@ -130,6 +152,11 @@ export function ArtworkPage({ id, mode: wanted }: { id: string; mode: Mode | und
                     </Link>
                   ))}
                 </div>
+                {a.saved && (
+                  <Button appearance="plain" onClick={() => unsave.mutate(a.id)}>
+                    {t.unsave}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="h-24 animate-pulse rounded bg-bg2" />

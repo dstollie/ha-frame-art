@@ -1,5 +1,6 @@
 import {
   mdiArrowLeft,
+  mdiShareVariant,
   mdiChevronDown,
   mdiChevronUp,
   mdiClose,
@@ -221,6 +222,14 @@ export function SeriesDetailPage({ id }: { id: string }) {
         )}
       </Card>
 
+      <Link
+        to="/share"
+        search={{ series: id }}
+        className="inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-medium text-primary hover:bg-bg2"
+      >
+        <Icon path={mdiShareVariant} size={18} />
+        {t.shareCollection}
+      </Link>
       <Button
         appearance="plain"
         variant="danger"

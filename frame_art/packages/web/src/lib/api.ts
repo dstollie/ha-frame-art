@@ -42,14 +42,69 @@ export type SeriesDetail = InferResponseType<Client["series"][":id"]["$get"], 20
 export type Playback = NonNullable<TvState["playback"]>
 export type PlaybackAction = "pause" | "resume" | "next" | "stop"
 
+export type Orient = "landscape" | "portrait" | "square" | "all"
+
+/** Explore's filters; they live in the URL so a view can be linked and survives a reload. */
 export interface BrowseFilters {
   cat?: string | undefined
   color?: string | undefined
   q?: string | undefined
   source?: string | undefined
   album?: string | undefined
-  all?: boolean | undefined // include portrait works
+  /** Include portrait works (My collection, albums). */
+  all?: boolean | undefined
   favourites?: boolean | undefined
+  collection?: string[] | undefined
+  century?: number[] | undefined
+  artist?: string | undefined
+  /** Landscape unless set. */
+  orient?: Orient | undefined
+  uhd?: boolean | undefined
+  ai?: "yes" | "no" | undefined
+  licence?: string[] | undefined
+  sort?: "shuffle" | "new" | undefined
+  seed?: number | undefined
+}
+
+/** True when anything narrows the catalogue (then Explore shows results instead of its landing). */
+export const isFiltering = (f: BrowseFilters) =>
+  Boolean(
+    f.q ||
+    f.cat ||
+    f.color ||
+    f.collection?.length ||
+    f.century?.length ||
+    f.artist ||
+    (f.orient && f.orient !== "landscape") ||
+    f.uhd ||
+    f.ai ||
+    f.licence?.length ||
+    f.sort ||
+    f.seed,
+  )
+
+const csv = (xs: (string | number)[] | undefined) => (xs?.length ? xs.join(",") : undefined)
+
+/** The API's query string for a set of filters. */
+export function toQuery(f: BrowseFilters) {
+  const own = f.source === "mine" || Boolean(f.album) || Boolean(f.favourites)
+  return {
+    category: f.cat,
+    color: f.color,
+    q: f.q,
+    source: f.source,
+    album: f.album,
+    favourites: f.favourites ? "1" : undefined,
+    collection: csv(f.collection),
+    century: csv(f.century),
+    artist: f.artist,
+    orient: f.all || own ? ("all" as const) : (f.orient ?? "landscape"),
+    uhd: f.uhd ? "1" : undefined,
+    ai: f.ai,
+    licence: csv(f.licence),
+    sort: f.sort,
+    seed: f.seed === undefined ? String(seed) : String(f.seed),
+  } as const
 }
 
 const PAGE = 36
@@ -76,28 +131,14 @@ export const useConfig = () =>
 export const useTvs = () =>
   useQuery({ queryKey: keys.tvs, queryFn: async () => ok(await api().tvs.$get()), refetchInterval: 10_000 })
 
-export function useArtworks(f: BrowseFilters) {
+export function useArtworks(f: BrowseFilters, enabled = true) {
   return useInfiniteQuery({
     queryKey: keys.artworks(f),
+    enabled,
     initialPageParam: 0,
     placeholderData: keepPreviousData,
     queryFn: async ({ pageParam }) =>
-      ok(
-        await api().artworks.$get({
-          query: {
-            category: f.cat,
-            color: f.color,
-            q: f.q,
-            source: f.source,
-            album: f.album,
-            landscape: f.all || f.favourites || f.album || f.source === "mine" ? undefined : "1",
-            favourites: f.favourites ? "1" : undefined,
-            offset: String(pageParam),
-            limit: String(PAGE),
-            seed: String(seed),
-          },
-        }),
-      ),
+      ok(await api().artworks.$get({ query: { ...toQuery(f), offset: String(pageParam), limit: String(PAGE) } })),
     getNextPageParam: (last) => last.nextOffset ?? undefined,
   })
 }
@@ -106,11 +147,64 @@ export const useArtwork = (id: string) =>
   useQuery({ queryKey: keys.artwork(id), queryFn: async () => ok(await api().artworks[":id"].$get({ param: { id } })) })
 
 export async function randomArtwork(f: BrowseFilters): Promise<ArtworkDTO> {
-  return ok(
-    await api().random.$get({
-      query: { category: f.cat, color: f.color, q: f.q, source: f.source, landscape: f.all ? undefined : "1" },
-    }),
-  )
+  return ok(await api().random.$get({ query: toQuery(f) }))
+}
+
+export type Facets = InferResponseType<Client["facets"]["$get"], 200>
+export const useFacets = (f: BrowseFilters) =>
+  useQuery({
+    queryKey: ["facets", f],
+    placeholderData: keepPreviousData,
+    queryFn: async () => ok(await api().facets.$get({ query: toQuery(f) })),
+  })
+
+export type Landing = InferResponseType<Client["landing"]["$get"], 200>
+export const useLanding = () =>
+  useQuery({ queryKey: ["landing"], staleTime: 300_000, queryFn: async () => ok(await api().landing.$get()) })
+
+export type LiveGroup = InferResponseType<Client["live"]["$get"], 200>[number]
+export const useLive = (q: string | null) =>
+  useQuery({
+    queryKey: ["live", q],
+    enabled: Boolean(q && q.length >= 2),
+    staleTime: 600_000,
+    retry: false,
+    queryFn: async () => ok(await api().live.$get({ query: { q: q! } })),
+  })
+
+export function useSaveLive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => ok(await api().live.save.$post({ json: { id } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["live"] })
+      void qc.invalidateQueries({ queryKey: ["artworks"] })
+    },
+  })
+}
+
+export function useUnsave() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => ok(await api().saved[":id"].$delete({ param: { id } })),
+    onSuccess: (_d, id) => invalidateArt(qc, id),
+  })
+}
+
+export type CatalogueCollection = InferResponseType<Client["collections"]["$get"], 200>[number]
+export const useCollections = () =>
+  useQuery({ queryKey: ["collections"], queryFn: async () => ok(await api().collections.$get()) })
+
+export function useSetCollection() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) =>
+      ok(await api().settings.collections[":id"].$put({ param: { id }, json: { enabled } })),
+    onSettled: () => {
+      for (const key of ["collections", "artworks", "facets", "landing"]) void qc.invalidateQueries({ queryKey: [key] })
+      void qc.invalidateQueries({ queryKey: keys.config })
+    },
+  })
 }
 
 const invalidateArt = (qc: ReturnType<typeof useQueryClient>, id?: string) => {
@@ -424,13 +518,9 @@ export function useSeriesMutations() {
         const body =
           from && "query" in from
             ? {
-                query: {
-                  ...(from.query.cat ? { category: from.query.cat } : {}),
-                  ...(from.query.color ? { color: from.query.color } : {}),
-                  ...(from.query.q ? { q: from.query.q } : {}),
-                  ...(from.query.source ? { source: from.query.source } : {}),
-                  ...(from.query.all || from.query.source === "mine" ? {} : { landscape: "1" as const }),
-                },
+                query: Object.fromEntries(
+                  Object.entries(toQuery(from.query)).filter(([k, v]) => v !== undefined && k !== "seed"),
+                ),
               }
             : (from ?? {})
         return ok(await api().series.$post({ json: { name, ...body } }))
@@ -494,3 +584,12 @@ export function usePlaybackControl() {
 }
 
 export const DURATIONS = [60, 300, 900, 1800, 3600, 7200, 21600, 43200, 86400] as const
+
+// ------------------------------------------------------------------ sharing
+
+export type ShareInput = Parameters<Client["share"]["$post"]>[0]["json"]
+export type ShareResult = InferResponseType<Client["share"]["$post"], 200>
+
+export function useShare() {
+  return useMutation({ mutationFn: async (json: ShareInput) => ok(await api().share.$post({ json })) })
+}
