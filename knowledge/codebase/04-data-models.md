@@ -62,6 +62,28 @@ erDiagram
     text album_id PK
     text artwork_id PK
   }
+  community_collections {
+    text id PK "collection slug"
+    text title
+    integer enabled "off = hidden from Explore"
+    integer position "index order"
+  }
+  community_items {
+    text collection_id PK
+    text item_id PK "manifest id, e.g. wikidata-Q12418"
+    text artwork_id "community:<item id>"
+    integer position
+  }
+  community_raw {
+    text item_id PK
+    text json "the item as published (for sharing)"
+  }
+  saved {
+    text artwork_id PK "live-search work kept in My collection"
+  }
+  artworks_fts {
+    text id "FTS5 trigram: title, artist, extra"
+  }
   meta {
     text key PK "last_sync, category:<tv>, display:<tv>, playback:<tv> (JSON)"
     text value
@@ -70,6 +92,8 @@ erDiagram
   artworks ||--o{ uploads : "uploaded as"
   artworks ||--o{ history : "shown"
   albums ||--o{ album_items : "holds"
+  community_collections ||--o{ community_items : "lists"
+  artworks ||--o{ community_items : "in"
   series ||--o{ series_items : "plays"
   artworks ||--o{ series_items : "in"
   artworks ||--o{ album_items : "in"

@@ -29,6 +29,11 @@ Foundational knowledge about how Frame Art is put together. Load the file that m
 **Keywords:** series, playlist, slideshow, playback, player, shuffle, duration, pause, next, set_slideshow_status, re-use uploads
 **When to use:** changing how series play, the player in `player.ts`, upload re-use in `jobs.ts`, or the series entities and MCP tools
 
+### ADR: catalogue from frame-art-collections
+**File:** @knowledge/codebase/07-adr-catalogue-from-collections.md
+**Keywords:** catalogue, collections, community, sync, live search, providers, duplicates, dHash, migration, FTS5, trigram, facets, explore, saved
+**When to use:** changing where works come from, search and facets, live museum search, deduplication, or `community.ts`/`live.ts`
+
 ## Loading Logic
 
 1. **Primary:** Match keywords from the request

@@ -5,7 +5,7 @@ You are a senior software engineer for this codebase.
 
 ## Project
 
-Frame Art puts open-access museum art (pluggable providers: the Met, AIC, Rijksmuseum, Cleveland, SMK, Wikimedia, Europeana, Smithsonian) and the user's own uploads on a Samsung The Frame with one tap. Two parts: a Home Assistant **add-on** (TypeScript: Hono API, catalogue, sharp rendering, a TypeScript port of the Frame's art channel, an MCP server) and a **custom integration** (Python, HACS) that adds a native sidebar panel and proxies the API and MCP through HA. Runs on a Raspberry Pi 4 (aarch64); CI builds the image and publishes it to GHCR.
+Frame Art puts openly licensed art and the user's own photos on a Samsung The Frame with one tap. The catalogue comes from the curated collections in [frame-art-collections](https://github.com/dstollie/frame-art-collections); the museum providers (the Met, AIC, Rijksmuseum, Cleveland, SMK, Wikimedia, Europeana, Smithsonian) answer live searches. Two parts: a Home Assistant **add-on** (TypeScript: Hono API, catalogue, sharp rendering, a TypeScript port of the Frame's art channel, an MCP server) and a **custom integration** (Python, HACS) that adds a native sidebar panel and proxies the API and MCP through HA. Runs on a Raspberry Pi 4 (aarch64); CI builds the image and publishes it to GHCR.
 
 ## What we never compromise on
 
@@ -17,9 +17,9 @@ The Frame shows an "Allow" prompt for every new connection without a valid token
 
 The preview in the web app and the 3840×2160 JPEG on the TV come from the same geometry (`packages/server/src/geometry.ts`). Change the layout there, never in one place only.
 
-### 3. Open access only
+### 3. Open licences only, credited
 
-Only CC0 or public-domain works enter the catalogue from providers. A source without a licence per work doesn't go in. Users' own uploads live in "My collection" and never leave the Pi. See @knowledge/external/museum-apis/sources.md.
+The catalogue holds what frame-art-collections publishes: CC0, public domain, CC BY and CC BY-SA, and the latter two always with their attribution shown on the work. Live search only returns open-access works. Users' own uploads live in "My collection" and never leave the Pi (sharing a selection leaves them out). See @knowledge/codebase/07-adr-catalogue-from-collections.md.
 
 ### 4. Native in Home Assistant
 
@@ -86,7 +86,7 @@ Before calling work done, walk this list and say which entries applied:
   - `packages/frame-tv`: art-channel client (`FrameArtClient`, `deviceInfo`) and `FakeFrame`. No app logic.
   - `packages/server`: Hono app (`app.ts`), catalogue sources (`sources/`), categories (`categorize.ts`), SQLite (`db.ts`), render (`render.ts`, `geometry.ts`), jobs (`jobs.ts`), sync (`sync.ts`), MQTT (`mqtt.ts`), TV wrapper (`tv.ts`). `scripts/dev-stack.ts` runs everything with fake TVs behind a fake ingress prefix.
   - `packages/web`: the panel. `panel.tsx` (custom element), `router.tsx`, API hooks in `lib/api.ts`, strings in `lib/i18n.ts`, HA element wrappers in `components/ha.tsx`, pages in `pages/`.
-  - `packages/server/src/providers`: one file per art provider + `registry.ts`; `sources.ts` holds their on/off and keys; `collection.ts` is My collection; `mcp.ts` the MCP tools; `auth.ts` the tokens.
+  - `packages/server/src/community.ts`: the catalogue from frame-art-collections (sync, matching, migration, sharing); `live.ts` is live museum search; `providers/`: one file per museum with `search()` + `registry.ts`; `sources.ts` holds their on/off and keys; `collection.ts` is My collection; `series.ts`/`player.ts` the series; `mcp.ts` the MCP tools; `auth.ts` the tokens.
 - `custom_components/frame_art/`: the HA integration (config flow, proxy views, panel registration). `hacs.json` at the root.
 - `tests/`: Python tests for the integration.
 - `knowledge/`: architecture, guidelines and external API notes.
@@ -120,7 +120,7 @@ When asked to implement a feature or change:
 All commands run in `frame_art/`.
 
 - `pnpm install` installs the workspace (and the pre-commit hook).
-- `pnpm dev:stack` builds the panel and starts the API with two fake Frames and about 660 real works: http://localhost:8123/frame-art/ (as an HA panel, `?theme=dark`, `?lang=nl`) and http://localhost:8123/api/hassio_ingress/dev-token-123/ (ingress page).
+- `pnpm dev:stack` builds the panel and starts the API with two fake Frames, a fake collections repository (72 works in six overlapping collections) and a fake live-search museum: http://localhost:8123/frame-art/ (as an HA panel, `?theme=dark`, `?lang=nl`) and http://localhost:8123/api/hassio_ingress/dev-token-123/ (ingress page).
 - `pnpm --filter web dev` starts the Vite dev server (proxies `/api` to `localhost:8099`).
 - `pnpm build` builds all packages.
 - `pnpm docker:build` builds the aarch64 image locally the way the Supervisor would (legacy builder).
