@@ -60,7 +60,7 @@ Before calling work done, walk this list and say which entries applied:
 - **HA entities.** If behaviour per TV changes, check the MQTT discovery entities (`mqtt.ts`) and `DOCS.md`.
 - **Fake Frame.** If you use a new art-channel request, teach `FakeFrame` the same request and its error case.
 - **Add-on options.** A new option goes into `config.yaml` (`options` and `schema`), `translations/en.yaml`, `config.ts` (zod) and `DOCS.md`.
-- **Release.** A change meant for the Pi bumps `version` in `frame_art/config.yaml` (and `custom_components/frame_art/manifest.json` when the integration changed) and gets a `CHANGELOG.md` line.
+- **Release.** A change meant for the Pi bumps `version` in `frame_art/config.yaml` and `custom_components/frame_art/manifest.json` (CI requires them equal) and gets a `CHANGELOG.md` line. HACS/Marketplace follows `main` only while the repository has no GitHub releases; once the first release exists, every version needs `gh release create vX.Y.Z` or the integration stops updating.
 - **Reverse states.** Favourite needs unfavourite, pair needs re-pair, hide needs a way back. A one-way door is a bug.
 
 ## Framework & Technology Stack
