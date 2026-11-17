@@ -33,9 +33,15 @@ export interface TV {
   readonly paired: boolean
   isOn(): Promise<boolean>
   pair(): Promise<{ apiVersion: string }>
-  show(jpeg: Buffer): Promise<string>
+  /**
+   * Upload and show. `artMode: true` (a person asked) also switches Art Mode on; false (series,
+   * automations) only selects, which callers do only when the TV is already in Art Mode.
+   */
+  show(jpeg: Buffer, opts?: { artMode?: boolean }): Promise<string>
   /** Select a work that is already on the TV; false when the TV no longer has it. */
-  showExisting(contentId: string): Promise<boolean>
+  showExisting(contentId: string, opts?: { artMode?: boolean }): Promise<boolean>
+  /** Whether the TV shows Art Mode right now (false when it shows TV, is off, or can't tell). */
+  inArtMode(): Promise<boolean>
   remove(contentIds: string[]): Promise<void>
 }
 
@@ -117,23 +123,28 @@ export class FrameTV implements TV {
   }
 
   /** Upload, select and switch Art Mode on in one connection. Returns the content id. */
-  show(jpeg: Buffer) {
+  show(jpeg: Buffer, opts: { artMode?: boolean } = {}) {
     return this.serial(() =>
       this.withClient(async (c) => {
         const id = await c.upload(jpeg, { fileType: "jpg", matte: "none", portraitMatte: "none" })
         await c.selectImage(id, true)
-        await c.setArtMode(true)
+        if (opts.artMode !== false) await c.setArtMode(true)
         return id
       }),
     )
   }
 
-  showExisting(contentId: string) {
+  async inArtMode() {
+    if (!this.paired || !(await this.isOn().catch(() => false))) return false
+    return this.serial(() => this.withClient((c) => c.getArtMode())).catch(() => false)
+  }
+
+  showExisting(contentId: string, opts: { artMode?: boolean } = {}) {
     return this.serial(() =>
       this.withClient(async (c) => {
         if (!(await c.contentIds()).includes(contentId)) return false
         await c.selectImage(contentId, true)
-        await c.setArtMode(true)
+        if (opts.artMode !== false) await c.setArtMode(true)
         return true
       }),
     )

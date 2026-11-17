@@ -341,6 +341,40 @@ describe("browse, favourites, rotation", () => {
     await bridge.onMessage("frame_art/onbekend/new/set", "PRESS") // ignored
   })
 
+  it('MQTT "new artwork" (automations) leaves a TV that is showing TV alone; the panel button may switch', async () => {
+    await boot()
+    const bridge = new MqttBridge(
+      settings.tvs,
+      { host: "unused", port: 1883 },
+      {
+        onNew: async (tv) => void svc.next(tv, { background: true }),
+        onCategory: (tv, c) => svc.setCategory(tv, c),
+        categoryOf: svc.categoryOf,
+      },
+    )
+    frame.artMode = false
+    const before = frame.requests.length
+    await bridge.onMessage("frame_art/woonkamer/new/set", "PRESS")
+    await svc.runner.idle()
+    expect(svc.runner.latest("woonkamer")).toMatchObject({ status: "error", error: "TV staat niet in Art Mode" })
+    const sent = frame.requests.slice(before).map((r) => r.request)
+    expect(sent).not.toContain("select_image")
+    expect(sent).not.toContain("set_artmode_status")
+    expect(frame.artMode).toBe(false)
+
+    // In Art Mode, the automation changes the work.
+    frame.artMode = true
+    await bridge.onMessage("frame_art/woonkamer/new/set", "PRESS")
+    await svc.runner.idle()
+    expect(svc.runner.latest("woonkamer")!.status).toBe("done")
+
+    // A tap in the panel is the user asking: that may switch to Art Mode.
+    frame.artMode = false
+    const r = await api.tvs[":tv"].next.$post({ param: { tv: "woonkamer" } })
+    expect((await waitJob((await r.json()).id)).status).toBe("done")
+    expect(frame.artMode).toBe(true)
+  })
+
   it("does not touch the cache dir outside /data", async () => {
     await boot()
     expect(existsSync(paths(settings).renders)).toBe(true)

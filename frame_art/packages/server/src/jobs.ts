@@ -25,7 +25,10 @@ export interface JobDTO {
   tv: string
   artworkId: string
   mode: Mode
-  /** Woken for this job when off; series steps after the first never wake a TV. */
+  /**
+   * true: a person asked (Show, Play, "new artwork" in the panel): the TV may be woken and switched
+   * to Art Mode. false: a series step or an automation: only when the TV is already in Art Mode.
+   */
   wake: boolean
   status: "queued" | "running" | "done" | "error"
   error: string | null
@@ -35,6 +38,8 @@ export interface JobDTO {
 }
 
 export type ShownCallback = (tv: string, art: Artwork, jpeg: Buffer) => Promise<void>
+
+export const NOT_IN_ART_MODE = "TV staat niet in Art Mode"
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -103,6 +108,14 @@ export class JobRunner {
     if (s) s.state = state
   }
 
+  /** Nobody asked: never take over a TV that is off or showing TV. */
+  private async requireArtMode(job: JobDTO) {
+    const tv = this.tvs.get(job.tv)!
+    if (!(await tv.isOn().catch(() => false))) throw new Error("De TV staat uit")
+    if (!(await tv.inArtMode())) throw new Error(NOT_IN_ART_MODE)
+    this.step(job, "wake", "skipped")
+  }
+
   private async wake(job: JobDTO, tv: TV) {
     if (await tv.isOn()) return this.step(job, "wake", "skipped")
     const cfg = this.settings.tvs.find((t) => t.id === job.tv)
@@ -123,6 +136,7 @@ export class JobRunner {
 
   private async run(job: JobDTO) {
     job.status = "running"
+    if (!job.wake) await this.requireArtMode(job)
     const art = this.store.get(job.artworkId)
     if (!art) throw new Error(`Onbekend werk ${job.artworkId}`)
     const tv = this.tvs.get(job.tv)!
@@ -154,7 +168,7 @@ export class JobRunner {
     await this.wake(job, tv)
 
     this.step(job, "show", "busy")
-    const contentId = await tv.show(jpeg)
+    const contentId = await tv.show(jpeg, { artMode: job.wake })
     this.store.recordUpload(job.tv, contentId, art.id, job.mode)
     this.store.addHistory(job.tv, art.id, job.mode)
     this.step(job, "show", "done")
@@ -184,7 +198,7 @@ export class JobRunner {
     this.step(job, "show", "busy")
     let shown = false
     try {
-      shown = await tv.showExisting(contentId)
+      shown = await tv.showExisting(contentId, { artMode: job.wake })
     } catch {
       shown = false // can't tell; upload again
     }

@@ -288,12 +288,13 @@ export function createServices(deps: Deps) {
       svc.player.hold(tv)
       return svc.runner.submit(tv, artworkId, svc.modeFor(tv, mode))
     },
-    next(tv: string) {
-      svc.player.hold(tv)
+    /** "New artwork": from the panel (a person) it may switch to Art Mode; from MQTT (automations) it may not. */
+    next(tv: string, opts: { background?: boolean } = {}) {
+      if (!opts.background) svc.player.hold(tv)
       const category = svc.categoryOf(tv)
       const art = svc.runner.pickNext(tv, category)
       if (!art) throw new HTTPException(404, { message: "Geen werk gevonden in deze categorie" })
-      return svc.runner.submit(tv, art.id, svc.modeFor(tv))
+      return svc.runner.submit(tv, art.id, svc.modeFor(tv), { wake: !opts.background })
     },
     playbackOf(tv: string, favs = store.favouriteIds()) {
       const st = svc.player.state(tv)

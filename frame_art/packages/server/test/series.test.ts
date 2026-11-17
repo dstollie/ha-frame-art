@@ -275,6 +275,34 @@ describe("series playback", () => {
     expect((await playback())!.current!.id).toBe("met:2")
   })
 
+  it("never switches a TV that is showing TV to Art Mode: it waits until the TV is in Art Mode", async () => {
+    await boot()
+    const s = await create({ name: "Kijken", artworkIds: ["met:1", "met:2"], duration: 60 })
+    await api.series[":id"].play.$post({ param: { id: s.id }, json: { tvs: ["woonkamer"] } })
+    await settle()
+    const frame = frames[0]!
+    // Someone switches to TV: power stays "on", Art Mode goes off.
+    frame.artMode = false
+    const before = frame.requests.length
+    await advance(60)
+    await advance(60)
+    const sent = frame.requests.slice(before).map((r) => r.request)
+    expect(sent).not.toContain("select_image")
+    expect(sent).not.toContain("set_artmode_status")
+    expect(sent).not.toContain("send_image")
+    expect(frame.artMode).toBe(false)
+    expect(await playback()).toMatchObject({ current: { id: "met:1" }, error: "TV staat niet in Art Mode" })
+
+    // Back in Art Mode: the next step changes the work, without touching the mode.
+    frame.artMode = true
+    const again = frame.requests.length
+    await advance(60)
+    expect((await playback())!.current!.id).toBe("met:2")
+    const later = frame.requests.slice(again).map((r) => r.request)
+    expect(later).toContain("select_image")
+    expect(later).not.toContain("set_artmode_status")
+  })
+
   it("wakes the TV when you press play, like a tap on Show", async () => {
     await boot()
     frames[0]!.setPower("standby")

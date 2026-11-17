@@ -37,7 +37,7 @@ if (settings.mqtt) {
     svc.mqtt = new MqttBridge(settings.tvs, conn, {
       onNew: async (tv) => {
         try {
-          svc.next(tv)
+          svc.next(tv, { background: true })
         } catch (e) {
           console.warn(`MQTT new on ${tv}:`, e instanceof Error ? e.message : e)
         }

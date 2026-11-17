@@ -4,7 +4,7 @@
  * still on the TV and uploads it otherwise. See knowledge/codebase/06-adr-series-playback.md.
  */
 import type { Store } from "./db.js"
-import type { JobRunner } from "./jobs.js"
+import { NOT_IN_ART_MODE, type JobRunner } from "./jobs.js"
 import type { Mode } from "./models.js"
 import type { SeriesRow, SeriesStore } from "./series.js"
 import type { TV } from "./tv.js"
@@ -151,14 +151,15 @@ export class Player {
     if (!row) return this.save(tv, null)
     let next = this.sync(pb, row)
     if (!next.order.length) return this.save(tv, null)
-    if (
-      !wake &&
-      !(await this.deps.tvs
-        .get(tv)
-        ?.isOn()
-        .catch(() => false))
-    ) {
-      return this.save(tv, { ...next, nextAt: this.now() + (this.opts.retryS ?? 60), error: "TV staat uit" })
+    // A step nobody asked for waits while the TV is off or showing TV; it never takes over the screen.
+    if (!wake) {
+      const set = this.deps.tvs.get(tv)
+      const on = await set?.isOn().catch(() => false)
+      const art = on ? await set!.inArtMode() : false
+      if (!art) {
+        const error = on ? NOT_IN_ART_MODE : "TV staat uit"
+        return this.save(tv, { ...next, nextAt: this.now() + (this.opts.retryS ?? 60), error })
+      }
     }
     let i = this.nextIndex(next)
     if (i === 0 && row.shuffle && next.order.length > 1) {
