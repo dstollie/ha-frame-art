@@ -1,0 +1,39 @@
+frame_art/packages/server/src/app.ts
+  s_e10072a93882f5::t_07a7a0ad8361b6 291-293,297
+frame_art/packages/server/src/jobs.ts
+  s_e10072a93882f5::t_58757f67c74e00 28-31,42-43,111-118,139,171,201
+frame_art/packages/server/src/main.ts
+  s_e10072a93882f5::t_0f99f1ba7a0d99 40
+frame_art/packages/server/src/player.ts
+  s_e10072a93882f5::t_d8d11fda78e002 7,154-162
+frame_art/packages/server/src/tv.ts
+  s_e10072a93882f5::t_53d1c1567fec67 36-40,42-44,126,131,137-142,147
+frame_art/packages/server/test/e2e.test.ts
+  s_e10072a93882f5::t_db58a0d6e71e09 344-377
+frame_art/packages/server/test/series.test.ts
+  s_e57963d2c3d792::t_c1b35017627c67 278-305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "665e156f3d8981f1a054546373b7adb539023113",
+  "prompts": {},
+  "sessions": {
+    "s_e10072a93882f5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0db7743-7ec2-4013-9816-db532dc16852",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    },
+    "s_e57963d2c3d792": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c27d801c-fa87-414a-92fe-60a691a5bf6d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Dennis Stolmeijer <dennisstolmeijer@gmail.com>"
+    }
+  }
+}
