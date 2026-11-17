@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Fix: a playing series switched a TV to Art Mode while someone was watching TV (a TV showing TV still reports "on"). Series steps and the "New artwork" MQTT button (automations) now only change the work when the TV is already in Art Mode; otherwise they wait. Only a person (Show, Play, "New artwork" in the panel) may switch a TV to Art Mode or wake it.
+
 ## 0.4.0
 
 - **The catalogue is frame-art-collections:** curated, openly licensed collections, synced nightly. Each work is stored once, however many collections hold it. Turn collections on or off under Settings. CC BY / BY-SA works show their credit.

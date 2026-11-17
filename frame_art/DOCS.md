@@ -39,7 +39,7 @@ With MQTT, each TV gets a device **Frame Art <name>**: `button.frame_art_<tv>_ni
 
 Series: per TV `select.frame_art_<tv>_serie` (pick a series to play it, `—` stops it; attributes: status, current, next, next_at) and the buttons `button.frame_art_<tv>_series_next`, `…_series_pause` (pause/resume) and `…_series_stop`. Each series is also a sensor on the device **Frame Art Series** (state: number of works; attributes: duration and total in minutes, shuffle, playing_on, cover).
 
-A series only advances while the add-on runs. It never switches a TV on by itself: when the TV is off, it waits and continues once the TV is on. Pressing **Play** does switch it on, like **Show on**. If you also turn on the TV's own slideshow, both will change the picture.
+A series only advances while the add-on runs. It never switches a TV on, and never switches a TV that is showing TV to Art Mode: it waits until the TV is in Art Mode again. The same holds for `button.frame_art_<tv>_nieuw` (automations). Only Show, Play and "New artwork" in the panel may wake a TV or switch it to Art Mode. Pressing **Play** does switch it on, like **Show on**. If you also turn on the TV's own slideshow, both will change the picture.
 
 ## AI assistants (MCP)
 

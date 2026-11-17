@@ -22,7 +22,7 @@ C is the hybrid: the add-on owns the schedule and the state; the TV owns the byt
 - **Order:** the series order, or a shuffled order drawn when playback starts and redrawn at every wrap. Editing a playing series is safe: removed works drop out of the order, added ones join at the end.
 - **Durations:** the work's own duration wins, then the series duration. Minimum 1 minute.
 - **Reuse uploads:** `uploads` gets a `mode` column. A job looks for an upload of the same work in the same mode on that TV and selects it; if the TV says no (deleted on the TV), it uploads again. This also speeds up "Zet op TV" for works shown before.
-- **The TV is off:** "play" wakes the TV (an explicit tap, like "Zet op TV"). Later steps never wake a TV: when it's off, the step is skipped and retried a minute later, so a series never switches a Frame on at night.
+- **The TV is off or showing TV:** "play" wakes the TV and switches Art Mode on (an explicit tap, like "Zet op TV"). Later steps never do: they check `get_artmode_status` first and only select a work when the TV is already in Art Mode (no `set_artmode_status`); otherwise they retry a minute later. A TV showing TV still reports `PowerState: on` over REST, so "on" alone is not enough (0.4.0 switched a TV that was showing TV to Art Mode; fixed in 0.4.1). The MQTT "new artwork" button, which automations press, follows the same rule.
 - **Native slideshow:** not touched. If someone enables it on the TV, both rotate; DOCS.md says so.
 - **Surfaces:** REST (`/series`, `/tvs/:tv/playback`), the panel (Series page and `/series/:id`), MQTT (per TV a `select` "Serie" plus buttons next, pause/resume, stop; per series a sensor with count, duration and cover), MCP (series CRUD, `play_series`, `control_playback`).
 
